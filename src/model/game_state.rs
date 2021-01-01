@@ -2,7 +2,22 @@ use std::iter;
 use std::fmt::{Display, Debug, Formatter, Error};
 use std::convert::TryFrom;
 
-pub type Move = (Position, Position);
+#[derive(Eq, PartialEq, Copy, Clone, Debug)]
+pub enum MoveType {
+    Step,
+    Capture(Piece),
+    EnPassant,
+    Promotion(Piece),
+    Castling,
+}
+
+#[derive(Eq, PartialEq, Copy, Clone, Debug)]
+pub struct Move {
+    pub move_type: MoveType,
+    pub moving_piece: Piece,
+    pub from: Position,
+    pub to: Position,
+}
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum Color {
@@ -120,6 +135,8 @@ pub struct GameState {
     black_queen: u64,
     black_king: u64,
 
+    en_passant: u64,
+
     to_move: Color,
 }
 
@@ -139,6 +156,8 @@ impl GameState {
             black_rook: 0,
             black_queen: 0,
             black_king: 0,
+
+            en_passant: 0,
 
             to_move: Color::WHITE,
         }
@@ -186,20 +205,6 @@ impl GameState {
     }
 
     pub fn get_piece_position(&self, piece: Piece, color: Color) -> Vec<Position> {
-        /*let mut vec = vec![];
-        let mut current_pos = 0;
-
-        let mut piece_mask = *self.get_piece_mask(piece, color);
-        
-        while piece_mask > 0 {
-            let trailing_zeros = piece_mask.trailing_zeros();
-            piece_mask = piece_mask >> (trailing_zeros + 1);
-            current_pos += trailing_zeros + 1;
-            vec.push(Position::from_numeric(u8::try_from(current_pos - 1).unwrap()));
-        } 
-
-        vec*/
-
         bit_mask_to_positions(*self.get_piece_mask(piece, color))
     }
 
@@ -234,32 +239,39 @@ impl GameState {
         self.black_pawn | self.black_knight | self.black_bishop | self.black_rook | self.black_queen | self.black_king
     }
 
-    pub fn apply_move(&self, to_move: Move) -> GameState {
+    pub fn apply_move(&self, to_apply: Move) -> GameState {
         let mut new_state  = *self;
 
-        let moving_piece = self.get_piece(to_move.0).unwrap();
-        let maybe_taken_piece = self.get_piece(to_move.1);
-
-        let piece_mask_for_moving = self.get_piece_mask(moving_piece.0, moving_piece.1);
-        let maybe_piece_mask_for_taken = maybe_taken_piece.map(|taken| self.get_piece_mask(taken.0, taken.1));
+        let moving_piece = to_apply.moving_piece;
+        let piece_mask_for_moving = self.get_piece_mask(moving_piece, self.to_move());
         
-        // the moving piece type's bit mask is cleared from move's origin and set to destination
-        let new_piece_mask_for_moving = piece_mask_for_moving ^ (to_move.0.to_bit_mask() | to_move.1.to_bit_mask());
-        // the taken piece type's bit mask is cleared from the move's destination
-        let maybe_new_piece_mask_for_taken = maybe_piece_mask_for_taken
-            .map(|piece_mask_for_taken| piece_mask_for_taken ^ to_move.1.to_bit_mask());
+        match to_apply.move_type {
+            MoveType::Capture(captured_piece) => {
+                let new_state_taken_piece_mask = new_state.get_piece_mask_mut(captured_piece, self.to_move().opposite());
+                *new_state_taken_piece_mask = *new_state_taken_piece_mask ^ to_apply.to.to_bit_mask();
+            },
+            _ => (),
+        }
 
-        let new_state_moving_piece_mask = new_state.get_piece_mask_mut(moving_piece.0, moving_piece.1);
+        // the moving piece type's bit mask is cleared from move's origin and set to destination
+        let new_piece_mask_for_moving = piece_mask_for_moving ^ (to_apply.from.to_bit_mask() | to_apply.to.to_bit_mask());
+
+        let new_state_moving_piece_mask = new_state.get_piece_mask_mut(moving_piece, self.to_move());
         // update bit mask for moving piece
         *new_state_moving_piece_mask = new_piece_mask_for_moving;
 
-        // update bit mask for captured piece if the move is a capture 
-        maybe_taken_piece
-            .map(|taken_piece| new_state.get_piece_mask_mut(taken_piece.0, taken_piece.1))
-            // Option::zip is not stable at present time
-            .into_iter().zip(maybe_new_piece_mask_for_taken).next()
-            .map(|(new_state_taken_piece_mask, new_piece_mask_taken)| *new_state_taken_piece_mask = new_piece_mask_taken);
-        
+        // set en passant bit mask
+        if moving_piece == Piece::PAWN {
+            let is_two_steps_move = i16::abs(i16::from(to_apply.from.to_numeric()) - i16::from(to_apply.to.to_numeric())) == 16;
+            if is_two_steps_move {
+                new_state.en_passant = to_apply.to.to_bit_mask();
+            } else {
+                new_state.en_passant = 0;
+            }
+        } else {
+            new_state.en_passant = 0;
+        }
+
         new_state.to_move = new_state.to_move.opposite();
 
         new_state
@@ -322,7 +334,6 @@ impl GameState {
     pub fn get_piece(&self, position: Position) -> Option<(Piece, Color)> {
         let bit_mask = position.to_bit_mask();
 
-        
         if self.white_pawn & bit_mask > 0 {
             Option::Some((Piece::PAWN, Color::WHITE))
         } else if self.white_knight & bit_mask > 0 {

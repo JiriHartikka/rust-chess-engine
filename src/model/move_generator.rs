@@ -3,6 +3,7 @@ use super::game_state::Position;
 use super::game_state::Color;
 use super::game_state::Piece;
 use super::game_state::Move;
+use super::game_state::MoveType;
 use super::game_state::bit_mask_to_positions;
 use super::attack_trace;
 
@@ -40,6 +41,7 @@ impl MoveGenerator {
         self.generate_moves_from_trace_and_piece_positions(
             board,
             board.get_piece_position(Piece::ROOK, board.to_move()),
+            Piece::ROOK,
             &self.rook_trace)
     }
 
@@ -47,6 +49,7 @@ impl MoveGenerator {
         self.generate_moves_from_trace_and_piece_positions(
             board,
             board.get_piece_position(Piece::BISHOP, board.to_move()),
+            Piece::BISHOP,
             &self.bishop_trace)
     }
 
@@ -54,6 +57,7 @@ impl MoveGenerator {
         self.generate_moves_from_trace_and_piece_positions(
             board,
             board.get_piece_position(Piece::KNIGHT, board.to_move()),
+            Piece::KNIGHT,
             &self.knight_trace)
     }
 
@@ -61,6 +65,7 @@ impl MoveGenerator {
         self.generate_moves_from_trace_and_piece_positions(
             board,
             board.get_piece_position(Piece::QUEEN, board.to_move()),
+            Piece::QUEEN,
             &self.queen_trace)
     }
 
@@ -75,11 +80,12 @@ impl MoveGenerator {
     fn generate_moves_from_trace_and_piece_positions(
         &self, board: &GameState, 
         piece_positions: Vec<Position>, 
+        piece: Piece,
         trace: &Vec<Vec<Vec<Position>>>) -> Vec<Move> {
 
         let mut moves = vec![];
         for piece_position in piece_positions {
-            let mut moves_from_position = self.generate_moves_from_trace_and_position(board, piece_position, trace);
+            let mut moves_from_position = self.generate_moves_from_trace_and_position(board, piece_position, piece, trace);
             moves.append(&mut moves_from_position);
         }
         moves
@@ -89,6 +95,7 @@ impl MoveGenerator {
         &self,
         board: &GameState,
         position: Position,
+        piece: Piece,
         trace: &Vec<Vec<Vec<Position>>>) -> Vec<Move> {
 
         let opposite_color = board.to_move().opposite();
@@ -97,8 +104,23 @@ impl MoveGenerator {
         for ray in &trace[usize::from(position.to_numeric())] {
             for to_move in ray {
                 match board.collide(*to_move) {
-                    None => moves.push((position, *to_move)),
-                    Some(color) if color == opposite_color => { moves.push((position, *to_move)); break },
+                    None => moves.push(
+                        Move {
+                            move_type: MoveType::Step,
+                            moving_piece: piece, 
+                            from: position,
+                            to: *to_move 
+                        }),
+                    Some(color) if color == opposite_color => { 
+                        moves.push(
+                            Move { 
+                                move_type: MoveType::Capture(board.get_piece(*to_move).unwrap().0),
+                                moving_piece: piece,
+                                from: position,
+                                to: *to_move,
+                            }); 
+                        break 
+                    },
                     Some(color) if color != opposite_color => break,
                     _ => panic!("Not possible"),
                 }
@@ -138,12 +160,23 @@ impl MoveGenerator {
 
         let mut one_step_moves = bit_mask_to_positions(valid_one_step_moves)
             .iter()
-            .map(|position| (position.delta(0, -1 * direction_multiplier).unwrap(), *position))
+            .map(|position| Move { 
+                move_type: MoveType::Step,
+                moving_piece: Piece::PAWN,
+                from: position.delta(0, -1 * direction_multiplier).unwrap(), 
+                to: *position })
             .collect();
 
         let mut two_step_moves = bit_mask_to_positions(valid_second_step_moves)
             .iter()
-            .map(|position| (position.delta(0, -2 * direction_multiplier).unwrap(), *position))
+            .map(|position| 
+                Move { 
+                    move_type: MoveType::Step,
+                    moving_piece: Piece::PAWN,
+                    from: position.delta(0, -2 * direction_multiplier).unwrap(),
+                    to: *position,
+
+                })
             .collect();
         
         moves.append(&mut one_step_moves);
@@ -180,11 +213,23 @@ impl MoveGenerator {
 
             let left_candidate = square.delta(-1, -direction_multiplier);
             if file != 1 && pawn_mask & left_candidate.unwrap().to_bit_mask() > 0 {
-                moves.push((left_candidate.unwrap(), square));
+                moves.push(
+                    Move { 
+                        move_type: MoveType::Capture(board.get_piece(square).unwrap().0),
+                        moving_piece: Piece::PAWN,
+                        from: left_candidate.unwrap(),
+                        to: square,
+                    });
             }
             let right_candidate = square.delta(1, -direction_multiplier); 
             if file != 8 && pawn_mask & right_candidate.unwrap().to_bit_mask() > 0 {
-                moves.push((right_candidate.unwrap(), square));
+                moves.push(
+                    Move { 
+                        move_type: MoveType::Capture(board.get_piece(square).unwrap().0),
+                        moving_piece: Piece::PAWN,
+                        from: right_candidate.unwrap(),
+                        to: square,
+                    });
             }
         }
 
@@ -195,5 +240,5 @@ impl MoveGenerator {
      fn generate_en_passant_captures(&self, board: &GameState) -> u64 {
          0
      }
-
+ 
 }

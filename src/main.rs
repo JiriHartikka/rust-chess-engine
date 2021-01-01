@@ -1,13 +1,19 @@
 mod model;
-use model::game_state::Position;
-use model::game_state::GameState;
+use model::game_state::{Position, GameState, Move, MoveType, Piece};
 
 fn main() {
     let state = GameState::new();
 
     println!("{}", state.to_string());
 
-    let state_after_move = state.apply_move((Position::new(5, 2), Position::new(5, 4)));
+    let e4 = Move { 
+        from: Position::new(5, 2),
+        to: Position::new(5, 4),
+        move_type: MoveType::Step,
+        moving_piece: Piece::PAWN, 
+    };
+
+    let state_after_move = state.apply_move(e4);
 
     println!("{}", state_after_move.to_string());
 
