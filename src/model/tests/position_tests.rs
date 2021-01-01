@@ -1,4 +1,4 @@
-use super::game_state::Position;
+use crate::model::game_state::Position;
 
 #[test]
 fn to_bit_mask() {

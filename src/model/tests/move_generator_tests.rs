@@ -1,7 +1,6 @@
-use super::game_state;
-use super::game_state::Position;
-use super::move_generator;
-
+use crate::model::game_state;
+use crate::model::game_state::Position;
+use crate::model::move_generator;
 
 #[test]
 fn test_moves_for_scandinavian_opening_sequence() {

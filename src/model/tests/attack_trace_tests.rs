@@ -1,6 +1,7 @@
+use crate::model::game_state::Position;
+use crate::model::attack_trace;
 use std::fmt::Debug;
-use super::game_state::Position;
-use super::attack_trace;
+
 
 #[test]
 fn test_knight_trace() {

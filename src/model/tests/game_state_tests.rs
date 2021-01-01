@@ -1,8 +1,7 @@
-
-use super::game_state;
-use super::game_state::Position;
-use super::game_state::Piece;
-use super::game_state::Color;
+use crate::model::game_state;
+use crate::model::game_state::Position;
+use crate::model::game_state::Piece;
+use crate::model::game_state::Color;
 
 
 #[test]
