@@ -7,6 +7,10 @@ use super::game_state::MoveType;
 use super::game_state::bit_mask_to_positions;
 use super::attack_trace;
 
+const MASK_FILE1: u64 = 0x0101010101010101;
+const MASK_FILE8: u64 = 0x8080808080808080;
+const MASK_RANK3: u64 = 0x0000000000ff0000;
+const MASK_RANK6: u64 = 0x0000ff0000000000;
 
 pub struct MoveGenerator {
     rook_trace: Vec<Vec<Vec<Position>>>,
@@ -27,13 +31,11 @@ impl MoveGenerator {
 
     pub fn generate_moves(&self, board: &GameState) -> Vec<Move> {
         let mut moves = vec![];
-
         moves.append(&mut self.generate_queen_moves(board));
         moves.append(&mut self.generate_rook_moves(board));
         moves.append(&mut self.generate_bishop_moves(board));
         moves.append(&mut self.generate_knight_moves(board));
         moves.append(&mut self.generate_pawn_moves(board));
-
         moves
     }
 
@@ -73,7 +75,7 @@ impl MoveGenerator {
         let mut moves = vec![];
         moves.append(&mut self.generate_pawn_steps(board, board.to_move()));
         moves.append(&mut self.generate_pawn_captures(board, board.to_move()));
-
+        moves.append(&mut self.generate_en_passant_captures(board));
         moves
     }
 
@@ -145,11 +147,9 @@ impl MoveGenerator {
         let valid_one_step_moves = pawns_one_step & !board.collide_mask(pawns_one_step);
 
         let can_take_second_step_mask = if color == Color::WHITE {
-            // third rank
-            0x0000000000ff0000
+            MASK_RANK3
         } else {
-            // sixth rank
-            0x0000ff0000000000
+            MASK_RANK6
         };
 
         let pawns_second_step = take_step(valid_one_step_moves & can_take_second_step_mask, color); 
@@ -188,18 +188,18 @@ impl MoveGenerator {
     // no en passant
     fn generate_pawn_captures(&self, board: &GameState, color: Color) -> Vec<Move> {
         // mask for file 1
-        let mask_file1 = 0x0101010101010101;
+        //let mask_file1 = 0x0101010101010101;
         // mask for file 8
-        let mask_file8 = 0x8080808080808080;
+        //let mask_file8 = 0x8080808080808080;
 
         let current_pawns = board.get_piece_mask(Piece::PAWN, color);
 
         // calculate squares where pawns may attack
         // shift pawn mask by 7 and 9 to get "forward facing diagonals" except on files 1 and 8 (where it would wrap)
         let attack_mask = if board.to_move() == Color::WHITE {
-            ((current_pawns & !mask_file1) << 7) | ((current_pawns & !mask_file8) << 9)
+            ((current_pawns & !MASK_FILE1) << 7) | ((current_pawns & !MASK_FILE8) << 9)
         } else {
-            ((current_pawns & !mask_file1) >> 9) | ((current_pawns & !mask_file8) >> 7)
+            ((current_pawns & !MASK_FILE1) >> 9) | ((current_pawns & !MASK_FILE8) >> 7)
         };
 
         let valid_captures = board.collide_mask_color(attack_mask , color.opposite());
@@ -237,8 +237,38 @@ impl MoveGenerator {
      }
 
      // not supported yet, add an en passant mask to game state and update on each apply_move call
-     fn generate_en_passant_captures(&self, board: &GameState) -> u64 {
-         0
+     fn generate_en_passant_captures(&self, board: &GameState) -> Vec<Move> {
+        let current_pawns = board.get_piece_mask(Piece::PAWN, board.to_move());
+        let direction_multiplier = if board.to_move() == Color::WHITE { 1 } else { -1 };
+
+        let mut moves = vec![];
+
+        if let Some(en_passant_square) = board.en_passant() {
+            let is_left_en_passant_valid = ((current_pawns & (!MASK_FILE1)) << 1) & (en_passant_square.to_bit_mask()) > 0;
+            let is_right_en_passant_valid = ((current_pawns & (!MASK_FILE8)) >> 1) & (en_passant_square.to_bit_mask()) > 0;                
+
+            if is_left_en_passant_valid {
+                let en_passant = Move {
+                    move_type: MoveType::EnPassant,
+                    moving_piece: Piece::PAWN,
+                    from: en_passant_square.delta(-1, 0).unwrap(),
+                    to: en_passant_square.delta(0, direction_multiplier).unwrap(),
+                };
+                moves.push(en_passant);
+            }
+
+            if is_right_en_passant_valid {
+                let en_passant = Move {
+                    move_type: MoveType::EnPassant,
+                    moving_piece: Piece::PAWN,
+                    from: en_passant_square.delta(1, 0).unwrap(),
+                    to: en_passant_square.delta(0, direction_multiplier).unwrap(),
+                };
+                moves.push(en_passant);
+            }
+        }
+
+        moves
      }
  
 }

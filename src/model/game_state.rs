@@ -135,7 +135,7 @@ pub struct GameState {
     black_queen: u64,
     black_king: u64,
 
-    en_passant: u64,
+    en_passant: Option<Position>,
 
     to_move: Color,
 }
@@ -157,7 +157,7 @@ impl GameState {
             black_queen: 0,
             black_king: 0,
 
-            en_passant: 0,
+            en_passant: None,
 
             to_move: Color::WHITE,
         }
@@ -196,6 +196,10 @@ impl GameState {
 
     pub fn to_move(&self) -> Color {
         self.to_move
+    }
+
+    pub fn en_passant(&self) -> Option<Position> {
+        self.en_passant
     }
 
     pub fn set_piece(&mut self, piece: Piece, color: Color, position: Position) {
@@ -264,12 +268,12 @@ impl GameState {
         if moving_piece == Piece::PAWN {
             let is_two_steps_move = i16::abs(i16::from(to_apply.from.to_numeric()) - i16::from(to_apply.to.to_numeric())) == 16;
             if is_two_steps_move {
-                new_state.en_passant = to_apply.to.to_bit_mask();
+                new_state.en_passant = Some(to_apply.to);
             } else {
-                new_state.en_passant = 0;
+                new_state.en_passant = None;
             }
         } else {
-            new_state.en_passant = 0;
+            new_state.en_passant = None;
         }
 
         new_state.to_move = new_state.to_move.opposite();
