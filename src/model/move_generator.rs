@@ -187,11 +187,6 @@ impl MoveGenerator {
 
     // no en passant
     fn generate_pawn_captures(&self, board: &GameState, color: Color) -> Vec<Move> {
-        // mask for file 1
-        //let mask_file1 = 0x0101010101010101;
-        // mask for file 8
-        //let mask_file8 = 0x8080808080808080;
-
         let current_pawns = board.get_piece_mask(Piece::PAWN, color);
 
         // calculate squares where pawns may attack

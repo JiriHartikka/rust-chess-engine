@@ -254,6 +254,11 @@ impl GameState {
                 let new_state_taken_piece_mask = new_state.get_piece_mask_mut(captured_piece, self.to_move().opposite());
                 *new_state_taken_piece_mask = *new_state_taken_piece_mask ^ to_apply.to.to_bit_mask();
             },
+            MoveType::EnPassant => {
+                let direction_multiplier = if self.to_move == Color::WHITE { 1 } else { -1 };
+                let new_state_taken_piece_mask = new_state.get_piece_mask_mut(Piece::PAWN, self.to_move().opposite());
+                *new_state_taken_piece_mask = *new_state_taken_piece_mask ^ (to_apply.to.delta(0, -direction_multiplier).unwrap().to_bit_mask());
+            },
             _ => (),
         }
 
