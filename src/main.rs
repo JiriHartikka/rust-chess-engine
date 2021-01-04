@@ -11,6 +11,7 @@ fn main() {
         to: Position::new(5, 4),
         move_type: MoveType::Step,
         moving_piece: Piece::PAWN, 
+        last_en_passant: None,
     };
 
     let state_after_move = state.apply_move(e4);

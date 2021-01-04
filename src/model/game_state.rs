@@ -17,6 +17,7 @@ pub struct Move {
     pub moving_piece: Piece,
     pub from: Position,
     pub to: Position,
+    pub last_en_passant: Option<Position>,
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
@@ -88,6 +89,10 @@ impl Position {
     pub fn file(&self) -> u8 {
         self.to_numeric() % 8 + 1
     }
+
+    pub fn mirror_rank(&self) -> Position {
+        Position::new(self.file(), 8 - self.rank())
+    }
 }
 
 impl Display for Position {
@@ -119,7 +124,7 @@ pub enum Piece {
     KING,
 }
 
-#[derive(Eq, PartialEq, Copy, Clone, Debug)]
+#[derive(Eq, PartialEq, Copy, Clone)]
 pub struct GameState {
     white_pawn: u64,
     white_knight: u64,
@@ -245,18 +250,22 @@ impl GameState {
 
     pub fn apply_move(&self, to_apply: Move) -> GameState {
         let mut new_state  = *self;
+        new_state.apply_move_mut(to_apply);
+        new_state
+    }
 
+    pub fn apply_move_mut(&mut self, to_apply: Move) {
         let moving_piece = to_apply.moving_piece;
-        let piece_mask_for_moving = self.get_piece_mask(moving_piece, self.to_move());
+        let piece_mask_for_moving = *self.get_piece_mask(moving_piece, self.to_move());
         
         match to_apply.move_type {
             MoveType::Capture(captured_piece) => {
-                let new_state_taken_piece_mask = new_state.get_piece_mask_mut(captured_piece, self.to_move().opposite());
+                let new_state_taken_piece_mask = self.get_piece_mask_mut(captured_piece, self.to_move().opposite());
                 *new_state_taken_piece_mask = *new_state_taken_piece_mask ^ to_apply.to.to_bit_mask();
             },
             MoveType::EnPassant => {
                 let direction_multiplier = if self.to_move == Color::WHITE { 1 } else { -1 };
-                let new_state_taken_piece_mask = new_state.get_piece_mask_mut(Piece::PAWN, self.to_move().opposite());
+                let new_state_taken_piece_mask = self.get_piece_mask_mut(Piece::PAWN, self.to_move().opposite());
                 *new_state_taken_piece_mask = *new_state_taken_piece_mask ^ (to_apply.to.delta(0, -direction_multiplier).unwrap().to_bit_mask());
             },
             _ => (),
@@ -265,7 +274,7 @@ impl GameState {
         // the moving piece type's bit mask is cleared from move's origin and set to destination
         let new_piece_mask_for_moving = piece_mask_for_moving ^ (to_apply.from.to_bit_mask() | to_apply.to.to_bit_mask());
 
-        let new_state_moving_piece_mask = new_state.get_piece_mask_mut(moving_piece, self.to_move());
+        let new_state_moving_piece_mask = self.get_piece_mask_mut(moving_piece, self.to_move());
         // update bit mask for moving piece
         *new_state_moving_piece_mask = new_piece_mask_for_moving;
 
@@ -273,17 +282,44 @@ impl GameState {
         if moving_piece == Piece::PAWN {
             let is_two_steps_move = i16::abs(i16::from(to_apply.from.to_numeric()) - i16::from(to_apply.to.to_numeric())) == 16;
             if is_two_steps_move {
-                new_state.en_passant = Some(to_apply.to);
+                self.en_passant = Some(to_apply.to);
             } else {
-                new_state.en_passant = None;
+                self.en_passant = None;
             }
         } else {
-            new_state.en_passant = None;
+            self.en_passant = None;
         }
 
-        new_state.to_move = new_state.to_move.opposite();
+        self.to_move = self.to_move.opposite();
+    }
 
-        new_state
+    pub fn unapply_move_mut(&mut self, to_unapply: Move) {
+        let moving_piece = to_unapply.moving_piece;
+        let piece_mask_for_moving = *self.get_piece_mask(moving_piece, self.to_move().opposite());
+        
+        match to_unapply.move_type {
+            MoveType::Capture(captured_piece) => {
+                let new_state_taken_piece_mask = self.get_piece_mask_mut(captured_piece, self.to_move());
+                *new_state_taken_piece_mask = *new_state_taken_piece_mask ^ to_unapply.to.to_bit_mask();
+            },
+            MoveType::EnPassant => {
+                let direction_multiplier = if self.to_move == Color::WHITE { 1 } else { -1 };
+                let new_state_taken_piece_mask = self.get_piece_mask_mut(Piece::PAWN, self.to_move());
+                *new_state_taken_piece_mask = *new_state_taken_piece_mask ^ (to_unapply.to.delta(0, -direction_multiplier).unwrap().to_bit_mask());
+            },
+            _ => (),
+        }
+
+        // the moving piece type's bit mask is cleared from move's origin and set to destination
+        let new_piece_mask_for_moving = piece_mask_for_moving ^ (to_unapply.from.to_bit_mask() | to_unapply.to.to_bit_mask());
+
+        let new_state_moving_piece_mask = self.get_piece_mask_mut(moving_piece, self.to_move().opposite());
+        // update bit mask for moving piece
+        *new_state_moving_piece_mask = new_piece_mask_for_moving;
+
+        self.en_passant = to_unapply.last_en_passant;
+
+        self.to_move = self.to_move.opposite();
     }
 
     pub fn get_piece_mask(&self, piece: Piece, color: Color) -> &u64 {
@@ -387,6 +423,12 @@ impl GameState {
         builder
     }
 
+}
+
+impl Debug for GameState {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "\n{}", self.to_string())
+    }
 }
 
 

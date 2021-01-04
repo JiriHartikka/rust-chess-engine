@@ -7,13 +7,15 @@ fn test_moves_for_scandinavian_opening_sequence() {
         from: Position::new(5, 2),
         to: Position::new(5, 4),
         move_type: MoveType::Step,
-        moving_piece: Piece::PAWN, 
+        moving_piece: Piece::PAWN,
+        last_en_passant: None, 
     };
     let d5 = Move { 
         from: Position::new(4, 7),
         to: Position::new(4, 5),
         move_type: MoveType::Step,
-        moving_piece: Piece::PAWN, 
+        moving_piece: Piece::PAWN,
+        last_en_passant: Some(Position::new(5, 4)),
     };
     
     let exd5 = Move { 
@@ -21,6 +23,7 @@ fn test_moves_for_scandinavian_opening_sequence() {
         to: Position::new(4, 5),
         move_type: MoveType::Capture(Piece::PAWN),
         moving_piece: Piece::PAWN, 
+        last_en_passant: Some(Position::new(4, 5)),
     };
     
     let qxd5 = Move { 
@@ -28,6 +31,7 @@ fn test_moves_for_scandinavian_opening_sequence() {
         to: Position::new(4, 5),
         move_type: MoveType::Capture(Piece::PAWN),
         moving_piece: Piece::QUEEN, 
+        last_en_passant: None,
     };
 
     let mut game_state = game_state::GameState::new();
@@ -62,6 +66,7 @@ fn test_opening_sequence_with_en_passant() {
         to: Position::new(5, 4),
         move_type: MoveType::Step,
         moving_piece: Piece::PAWN, 
+        last_en_passant: None,
     };
 
     let nf6 = Move {
@@ -69,6 +74,7 @@ fn test_opening_sequence_with_en_passant() {
         to: Position::new(6, 6),
         move_type: MoveType::Step,
         moving_piece: Piece::KNIGHT,
+        last_en_passant: Some(Position::new(5, 4)),
     };
 
     let e5 = Move { 
@@ -76,6 +82,7 @@ fn test_opening_sequence_with_en_passant() {
         to: Position::new(5, 5),
         move_type: MoveType::Step,
         moving_piece: Piece::PAWN, 
+        last_en_passant: None,
     };
 
     let d5 = Move { 
@@ -83,6 +90,7 @@ fn test_opening_sequence_with_en_passant() {
         to: Position::new(4, 5),
         move_type: MoveType::Step,
         moving_piece: Piece::PAWN, 
+        last_en_passant: None,
     };
     
     let exd5 = Move { 
@@ -90,6 +98,7 @@ fn test_opening_sequence_with_en_passant() {
         to: Position::new(4, 6),
         move_type: MoveType::EnPassant,
         moving_piece: Piece::PAWN, 
+        last_en_passant: Some(Position::new(4, 5)),
     };
     
 

@@ -111,7 +111,8 @@ impl MoveGenerator {
                             move_type: MoveType::Step,
                             moving_piece: piece, 
                             from: position,
-                            to: *to_move 
+                            to: *to_move,
+                            last_en_passant: board.en_passant(), 
                         }),
                     Some(color) if color == opposite_color => { 
                         moves.push(
@@ -120,6 +121,7 @@ impl MoveGenerator {
                                 moving_piece: piece,
                                 from: position,
                                 to: *to_move,
+                                last_en_passant: board.en_passant(),
                             }); 
                         break 
                     },
@@ -164,7 +166,9 @@ impl MoveGenerator {
                 move_type: MoveType::Step,
                 moving_piece: Piece::PAWN,
                 from: position.delta(0, -1 * direction_multiplier).unwrap(), 
-                to: *position })
+                to: *position,
+                last_en_passant: board.en_passant(),
+            })
             .collect();
 
         let mut two_step_moves = bit_mask_to_positions(valid_second_step_moves)
@@ -175,7 +179,7 @@ impl MoveGenerator {
                     moving_piece: Piece::PAWN,
                     from: position.delta(0, -2 * direction_multiplier).unwrap(),
                     to: *position,
-
+                    last_en_passant: board.en_passant(),
                 })
             .collect();
         
@@ -214,6 +218,7 @@ impl MoveGenerator {
                         moving_piece: Piece::PAWN,
                         from: left_candidate.unwrap(),
                         to: square,
+                        last_en_passant: board.en_passant(),
                     });
             }
             let right_candidate = square.delta(1, -direction_multiplier); 
@@ -224,6 +229,7 @@ impl MoveGenerator {
                         moving_piece: Piece::PAWN,
                         from: right_candidate.unwrap(),
                         to: square,
+                        last_en_passant: board.en_passant(),
                     });
             }
         }
@@ -248,6 +254,7 @@ impl MoveGenerator {
                     moving_piece: Piece::PAWN,
                     from: en_passant_square.delta(-1, 0).unwrap(),
                     to: en_passant_square.delta(0, direction_multiplier).unwrap(),
+                    last_en_passant: board.en_passant(),
                 };
                 moves.push(en_passant);
             }
@@ -258,6 +265,7 @@ impl MoveGenerator {
                     moving_piece: Piece::PAWN,
                     from: en_passant_square.delta(1, 0).unwrap(),
                     to: en_passant_square.delta(0, direction_multiplier).unwrap(),
+                    last_en_passant: board.en_passant(),
                 };
                 moves.push(en_passant);
             }
