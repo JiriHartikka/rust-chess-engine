@@ -1,21 +1,34 @@
+#[macro_use]
+extern crate lazy_static;
+
 mod model;
-use model::game_state::{Position, GameState, Move, MoveType, Piece};
+mod search;
+use model::game_state::{GameState};
+use model::move_generator::MoveGenerator;
+use search::minimax_search::{negamax, negamax_with_transposition_table};
+use std::collections::HashMap;
 
 fn main() {
-    let state = GameState::new();
+    let move_generator = MoveGenerator::new();
+    let mut state = GameState::new();
+    let depth = 5;
 
-    println!("{}", state.to_string());
+    let (best_move, best_eval, node_count) = negamax(&mut state, &move_generator, depth);
 
-    let e4 = Move { 
-        from: Position::new(5, 2),
-        to: Position::new(5, 4),
-        move_type: MoveType::Step,
-        moving_piece: Piece::PAWN, 
-        last_en_passant: None,
-    };
+    println!("Best move: {:?}", best_move);
+    println!("Best eval {}", best_eval);
+    println!("At depth {}", depth);
+    println!("Visited nodes: {}", node_count);
 
-    let state_after_move = state.apply_move(e4);
 
-    println!("{}", state_after_move.to_string());
+    let transposition_table = &mut HashMap::new();
+    transposition_table.reserve(5_000_000);
+    let (best_move, best_eval, node_count) = negamax_with_transposition_table(&mut state,  &move_generator, transposition_table, depth);
+
+    println!("Best move: {:?}", best_move);
+    println!("Best eval {}", best_eval);
+    println!("At depth {}", depth);
+    println!("Visited nodes: {}", node_count);
+    println!("Table size: {}", transposition_table.len());
 
 }

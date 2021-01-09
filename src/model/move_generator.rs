@@ -29,6 +29,7 @@ impl MoveGenerator {
         }
     }
 
+    // TODO: test performance with smallvec: https://github.com/servo/rust-smallvec
     pub fn generate_moves(&self, board: &GameState) -> Vec<Move> {
         let mut moves = vec![];
         moves.append(&mut self.generate_queen_moves(board));
@@ -245,8 +246,8 @@ impl MoveGenerator {
         let mut moves = vec![];
 
         if let Some(en_passant_square) = board.en_passant() {
-            let is_left_en_passant_valid = ((current_pawns & (!MASK_FILE1)) << 1) & (en_passant_square.to_bit_mask()) > 0;
-            let is_right_en_passant_valid = ((current_pawns & (!MASK_FILE8)) >> 1) & (en_passant_square.to_bit_mask()) > 0;                
+            let is_left_en_passant_valid = ((current_pawns & (!MASK_FILE8)) << 1) & (en_passant_square.to_bit_mask()) > 0;
+            let is_right_en_passant_valid = ((current_pawns & (!MASK_FILE1)) >> 1) & (en_passant_square.to_bit_mask()) > 0;                
 
             if is_left_en_passant_valid {
                 let en_passant = Move {

@@ -1,6 +1,7 @@
 use std::iter;
 use std::fmt::{Display, Debug, Formatter, Error};
 use std::convert::TryFrom;
+use super::zobrist_hash;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum MoveType {
@@ -91,7 +92,7 @@ impl Position {
     }
 
     pub fn mirror_rank(&self) -> Position {
-        Position::new(self.file(), 8 - self.rank())
+        Position::new(self.file(), 9 - self.rank())
     }
 }
 
@@ -143,6 +144,8 @@ pub struct GameState {
     en_passant: Option<Position>,
 
     to_move: Color,
+
+    pub zobrist_hash: u64,
 }
 
 impl GameState {
@@ -165,6 +168,8 @@ impl GameState {
             en_passant: None,
 
             to_move: Color::WHITE,
+
+            zobrist_hash: 0,
         }
     }
 
@@ -195,6 +200,8 @@ impl GameState {
         state.set_piece(Piece::QUEEN, Color::BLACK, Position::new(4, 8));
         state.set_piece(Piece::KING, Color::WHITE, Position::new(5, 1));
         state.set_piece(Piece::KING, Color::BLACK, Position::new(5, 8));
+
+        state.zobrist_hash = zobrist_hash::hash(&state);
 
         state
     }
@@ -255,6 +262,8 @@ impl GameState {
     }
 
     pub fn apply_move_mut(&mut self, to_apply: Move) {
+        self.zobrist_hash = zobrist_hash::apply_move(self.zobrist_hash, to_apply, self.to_move());
+
         let moving_piece = to_apply.moving_piece;
         let piece_mask_for_moving = *self.get_piece_mask(moving_piece, self.to_move());
         
@@ -294,6 +303,8 @@ impl GameState {
     }
 
     pub fn unapply_move_mut(&mut self, to_unapply: Move) {
+        self.zobrist_hash = zobrist_hash::unapply_move(self.zobrist_hash, to_unapply, self.to_move());
+
         let moving_piece = to_unapply.moving_piece;
         let piece_mask_for_moving = *self.get_piece_mask(moving_piece, self.to_move().opposite());
         
@@ -303,7 +314,7 @@ impl GameState {
                 *new_state_taken_piece_mask = *new_state_taken_piece_mask ^ to_unapply.to.to_bit_mask();
             },
             MoveType::EnPassant => {
-                let direction_multiplier = if self.to_move == Color::WHITE { 1 } else { -1 };
+                let direction_multiplier = if self.to_move.opposite() == Color::WHITE { 1 } else { -1 };
                 let new_state_taken_piece_mask = self.get_piece_mask_mut(Piece::PAWN, self.to_move());
                 *new_state_taken_piece_mask = *new_state_taken_piece_mask ^ (to_unapply.to.delta(0, -direction_multiplier).unwrap().to_bit_mask());
             },
@@ -440,7 +451,8 @@ pub fn bit_mask_to_positions(bit_mask: u64) -> Vec<Position> {
     
     while mask > 0 {
         let trailing_zeros = mask.trailing_zeros();
-        mask = mask >> (trailing_zeros + 1);
+        let (shifted, overflow) = mask.overflowing_shr(trailing_zeros + 1);
+        mask = if overflow { 0 } else { shifted };
         current_pos += trailing_zeros + 1;
         vec.push(Position::from_numeric(u8::try_from(current_pos - 1).unwrap()));
     } 
