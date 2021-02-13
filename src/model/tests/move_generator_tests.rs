@@ -1,5 +1,5 @@
 use crate::model::{game_state, move_generator};
-use crate::model::game_state::{Move, MoveType, Position, Piece};
+use crate::model::game_state::{Move, MoveType, CastlingRights, Position, Piece};
 
 #[test]
 fn test_moves_for_scandinavian_opening_sequence() {
@@ -9,6 +9,7 @@ fn test_moves_for_scandinavian_opening_sequence() {
         move_type: MoveType::Step,
         moving_piece: Piece::PAWN,
         last_en_passant: None, 
+        last_castling_rights: CastlingRights::initial(),
     };
     let d5 = Move { 
         from: Position::new(4, 7),
@@ -16,6 +17,7 @@ fn test_moves_for_scandinavian_opening_sequence() {
         move_type: MoveType::Step,
         moving_piece: Piece::PAWN,
         last_en_passant: Some(Position::new(5, 4)),
+        last_castling_rights: CastlingRights::initial(),
     };
     
     let exd5 = Move { 
@@ -24,6 +26,7 @@ fn test_moves_for_scandinavian_opening_sequence() {
         move_type: MoveType::Capture(Piece::PAWN),
         moving_piece: Piece::PAWN, 
         last_en_passant: Some(Position::new(4, 5)),
+        last_castling_rights: CastlingRights::initial(),
     };
     
     let qxd5 = Move { 
@@ -32,6 +35,7 @@ fn test_moves_for_scandinavian_opening_sequence() {
         move_type: MoveType::Capture(Piece::PAWN),
         moving_piece: Piece::QUEEN, 
         last_en_passant: None,
+        last_castling_rights: CastlingRights::initial(),
     };
 
     let mut game_state = game_state::GameState::new();
@@ -67,6 +71,7 @@ fn test_opening_sequence_with_en_passant() {
         move_type: MoveType::Step,
         moving_piece: Piece::PAWN, 
         last_en_passant: None,
+        last_castling_rights: CastlingRights::initial(),
     };
 
     let nf6 = Move {
@@ -75,6 +80,7 @@ fn test_opening_sequence_with_en_passant() {
         move_type: MoveType::Step,
         moving_piece: Piece::KNIGHT,
         last_en_passant: Some(Position::new(5, 4)),
+        last_castling_rights: CastlingRights::initial(),
     };
 
     let e5 = Move { 
@@ -83,6 +89,7 @@ fn test_opening_sequence_with_en_passant() {
         move_type: MoveType::Step,
         moving_piece: Piece::PAWN, 
         last_en_passant: None,
+        last_castling_rights: CastlingRights::initial(),
     };
 
     let d5 = Move { 
@@ -91,6 +98,7 @@ fn test_opening_sequence_with_en_passant() {
         move_type: MoveType::Step,
         moving_piece: Piece::PAWN, 
         last_en_passant: None,
+        last_castling_rights: CastlingRights::initial(),
     };
     
     let exd5 = Move { 
@@ -99,6 +107,7 @@ fn test_opening_sequence_with_en_passant() {
         move_type: MoveType::EnPassant,
         moving_piece: Piece::PAWN, 
         last_en_passant: Some(Position::new(4, 5)),
+        last_castling_rights: CastlingRights::initial(),
     };
     
 

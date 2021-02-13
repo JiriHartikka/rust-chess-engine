@@ -113,7 +113,8 @@ impl MoveGenerator {
                             moving_piece: piece, 
                             from: position,
                             to: *to_move,
-                            last_en_passant: board.en_passant(), 
+                            last_en_passant: board.en_passant(),
+                            last_castling_rights: board.castling_rights, 
                         }),
                     Some(color) if color == opposite_color => { 
                         moves.push(
@@ -123,6 +124,7 @@ impl MoveGenerator {
                                 from: position,
                                 to: *to_move,
                                 last_en_passant: board.en_passant(),
+                                last_castling_rights: board.castling_rights,
                             }); 
                         break 
                     },
@@ -169,6 +171,7 @@ impl MoveGenerator {
                 from: position.delta(0, -1 * direction_multiplier).unwrap(), 
                 to: *position,
                 last_en_passant: board.en_passant(),
+                last_castling_rights: board.castling_rights,
             })
             .collect();
 
@@ -181,6 +184,7 @@ impl MoveGenerator {
                     from: position.delta(0, -2 * direction_multiplier).unwrap(),
                     to: *position,
                     last_en_passant: board.en_passant(),
+                    last_castling_rights: board.castling_rights,
                 })
             .collect();
         
@@ -220,6 +224,7 @@ impl MoveGenerator {
                         from: left_candidate.unwrap(),
                         to: square,
                         last_en_passant: board.en_passant(),
+                        last_castling_rights: board.castling_rights,
                     });
             }
             let right_candidate = square.delta(1, -direction_multiplier); 
@@ -231,6 +236,7 @@ impl MoveGenerator {
                         from: right_candidate.unwrap(),
                         to: square,
                         last_en_passant: board.en_passant(),
+                        last_castling_rights: board.castling_rights,
                     });
             }
         }
@@ -256,6 +262,7 @@ impl MoveGenerator {
                     from: en_passant_square.delta(-1, 0).unwrap(),
                     to: en_passant_square.delta(0, direction_multiplier).unwrap(),
                     last_en_passant: board.en_passant(),
+                    last_castling_rights: board.castling_rights,
                 };
                 moves.push(en_passant);
             }
@@ -267,6 +274,7 @@ impl MoveGenerator {
                     from: en_passant_square.delta(1, 0).unwrap(),
                     to: en_passant_square.delta(0, direction_multiplier).unwrap(),
                     last_en_passant: board.en_passant(),
+                    last_castling_rights: board.castling_rights,
                 };
                 moves.push(en_passant);
             }

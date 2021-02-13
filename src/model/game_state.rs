@@ -19,6 +19,26 @@ pub struct Move {
     pub from: Position,
     pub to: Position,
     pub last_en_passant: Option<Position>,
+    pub last_castling_rights: CastlingRights,
+}
+
+#[derive(Eq, PartialEq, Copy, Clone, Debug)]
+pub struct CastlingRights {
+    pub white_king_side: bool,
+    pub white_queen_side: bool,
+    pub black_king_side: bool,
+    pub black_queen_side: bool,
+}
+
+impl CastlingRights {
+    pub fn initial() -> CastlingRights {
+        CastlingRights {
+            white_king_side: true,
+            white_queen_side: true,
+            black_king_side: true,
+            black_queen_side: true,
+        }
+    }
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
@@ -143,7 +163,9 @@ pub struct GameState {
 
     en_passant: Option<Position>,
 
-    to_move: Color,
+    pub castling_rights: CastlingRights,
+
+    pub to_move: Color,
 
     pub zobrist_hash: u64,
 }
@@ -166,6 +188,8 @@ impl GameState {
             black_king: 0,
 
             en_passant: None,
+
+            castling_rights: CastlingRights::initial(),
 
             to_move: Color::WHITE,
 
