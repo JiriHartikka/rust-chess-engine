@@ -148,7 +148,7 @@ impl ZobristHasher {
         
         match to_unapply.move_type {
             MoveType::Capture(captured_piece) => {
-                let piece_index = zobrist_index_for_piece(captured_piece, to_move);
+                let piece_index = zobrist_index_for_piece(captured_piece, to_move.opposite());
                 new_hash = new_hash ^ self.pieces[to_square_index][piece_index];
             },
             MoveType::EnPassant => {
