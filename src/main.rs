@@ -11,13 +11,10 @@ use search::transposition_table::{TranspositionTable};
 fn main() {
     let move_generator = MoveGenerator::new();
     let mut state = GameState::new();
-    let initial_state = state.clone();
+    let transposition_table = &mut TranspositionTable::with_capacity(1_000_000);
     let depth = 7;
 
-    let transposition_table = &mut TranspositionTable::with_capacity(1_000_000);
-
     let (best_move, best_eval, node_count) = negamax_alpha_beta_with_trasposition_table(&mut state, &move_generator, transposition_table, depth);
-    assert_eq!(initial_state, state);
 
     println!("Best move: {:?}", best_move);
     println!("Best eval {}", best_eval);
