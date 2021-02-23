@@ -29,109 +29,213 @@ impl MoveGenerator {
         }
     }
 
+    pub fn get_move(&self, board: &GameState, from: Position, to: Position) -> Option<Move> {
+        self.generate_moves(board).into_iter().find(|m| m.to == to && m.from == from)
+    }
+
     // TODO: test performance with smallvec: https://github.com/servo/rust-smallvec
     pub fn generate_moves(&self, board: &GameState) -> Vec<Move> {
         let mut moves = vec![];
-        moves.append(&mut self.generate_queen_moves(board));
-        moves.append(&mut self.generate_rook_moves(board));
-        moves.append(&mut self.generate_bishop_moves(board));
-        moves.append(&mut self.generate_knight_moves(board));
-        moves.append(&mut self.generate_pawn_moves(board));
+        moves.append(&mut self.generate_queen_moves(board, board.to_move()));
+        moves.append(&mut self.generate_rook_moves(board, board.to_move()));
+        moves.append(&mut self.generate_bishop_moves(board, board.to_move()));
+        moves.append(&mut self.generate_knight_moves(board, board.to_move()));
+        moves.append(&mut self.generate_pawn_moves(board, board.to_move()));
+        moves.append(&mut self.generate_castling_moves(board, board.to_move()));
+
         moves
     }
 
-    pub fn generate_rook_moves(&self, board: &GameState) -> Vec<Move> {
+    fn generate_threats(&self, board: &GameState, color: Color) -> u64 {
+        let mut moves = vec![];
+        moves.append(&mut self.generate_queen_moves(board, color));
+        moves.append(&mut self.generate_rook_moves(board, color));
+        moves.append(&mut self.generate_bishop_moves(board, color));
+        moves.append(&mut self.generate_knight_moves(board, color));
+        moves.append(&mut self.generate_pawn_captures(board, color));
+        moves.append(&mut self.generate_king_moves(board, color));
+
+        moves.into_iter().fold(0, |mask, m| mask | m.to.to_bit_mask())
+    }
+
+    pub fn generate_rook_moves(&self, board: &GameState, to_move: Color) -> Vec<Move> {
         self.generate_moves_from_trace_and_piece_positions(
             board,
-            board.get_piece_position(Piece::ROOK, board.to_move()),
+            to_move,
+            board.get_piece_position(Piece::ROOK, to_move),
             Piece::ROOK,
             &self.rook_trace)
     }
 
-    pub fn generate_bishop_moves(&self, board: &GameState) -> Vec<Move> {
+    pub fn generate_bishop_moves(&self, board: &GameState, to_move: Color) -> Vec<Move> {
         self.generate_moves_from_trace_and_piece_positions(
             board,
-            board.get_piece_position(Piece::BISHOP, board.to_move()),
+            to_move,
+            board.get_piece_position(Piece::BISHOP, to_move),
             Piece::BISHOP,
             &self.bishop_trace)
     }
 
-    pub fn generate_knight_moves(&self, board: &GameState) -> Vec<Move> {
+    pub fn generate_knight_moves(&self, board: &GameState, to_move: Color) -> Vec<Move> {
         self.generate_moves_from_trace_and_piece_positions(
             board,
-            board.get_piece_position(Piece::KNIGHT, board.to_move()),
+            to_move,
+            board.get_piece_position(Piece::KNIGHT, to_move),
             Piece::KNIGHT,
             &self.knight_trace)
     }
 
-    pub fn generate_queen_moves(&self, board: &GameState) -> Vec<Move> {
+    pub fn generate_castling_moves(&self, board: &GameState, to_move: Color) -> Vec<Move> {
+        let opponent_threats = self.generate_threats(board, to_move.opposite());
+        let king = board.get_piece_position(Piece::KING, to_move)[0];
+
+        let mut moves = vec![];
+
+        if to_move == Color::WHITE && board.castling_rights.white_king_side ||
+           to_move == Color::BLACK && board.castling_rights.black_king_side {
+            let positions = [king, king.delta(1, 0).unwrap(), king.delta(2, 0).unwrap()];
+            
+            let is_no_threat_for_castling = positions.iter().all(|pos| (pos.to_bit_mask() & opponent_threats) == 0); 
+            let is_room_for_castling = positions[1..=2].iter().all(|pos| board.get_piece(*pos).is_none());
+
+            if is_no_threat_for_castling && is_room_for_castling {
+                moves.push(
+                    Move { 
+                        move_type: MoveType::Castling,
+                        moving_piece: Piece::KING,
+                        from: king,
+                        to: positions[2],
+                        last_en_passant: board.en_passant(),
+                        last_castling_rights: board.castling_rights, 
+                });
+            }
+        }
+
+        if to_move == Color::WHITE && board.castling_rights.white_queen_side ||
+           to_move == Color::BLACK && board.castling_rights.black_queen_side {
+            let positions = [king, king.delta(-1, 0).unwrap(), king.delta(-2, 0).unwrap()];
+
+            let is_no_threat_for_castling = positions.iter().all(|pos| (pos.to_bit_mask() & opponent_threats) == 0); 
+            let is_room_for_castling = positions[1..=2].iter().all(|pos| board.get_piece(*pos).is_none());
+            
+            if is_no_threat_for_castling && is_room_for_castling {
+                moves.push(
+                    Move { 
+                        move_type: MoveType::Castling,
+                        moving_piece: Piece::KING,
+                        from: king,
+                        to: positions[2],
+                        last_en_passant: board.en_passant(),
+                        last_castling_rights: board.castling_rights, 
+                });
+            }
+        }
+
+        moves
+    }
+
+    pub fn generate_queen_moves(&self, board: &GameState, to_move: Color) -> Vec<Move> {
         self.generate_moves_from_trace_and_piece_positions(
             board,
-            board.get_piece_position(Piece::QUEEN, board.to_move()),
+            to_move,
+            board.get_piece_position(Piece::QUEEN, to_move),
             Piece::QUEEN,
             &self.queen_trace)
     }
 
-    pub fn generate_pawn_moves(&self, board: &GameState) -> Vec<Move> {
+    pub fn generate_pawn_moves(&self, board: &GameState, to_move: Color) -> Vec<Move> {
         let mut moves = vec![];
-        moves.append(&mut self.generate_pawn_steps(board, board.to_move()));
-        moves.append(&mut self.generate_pawn_captures(board, board.to_move()));
+        moves.append(&mut self.generate_pawn_steps(board, to_move));
+        moves.append(&mut self.generate_pawn_captures(board, to_move));
         moves.append(&mut self.generate_en_passant_captures(board));
         moves
     }
 
+    pub fn generate_king_moves(&self, board: &GameState, to_move: Color) -> Vec<Move> {
+        let king = board.get_piece_position(Piece::KING, to_move)[0];
+        let target_squares = vec![
+            king.delta(0, 1),
+            king.delta(0, -1),
+            king.delta(1, 0),
+            king.delta(-1, 0),
+            king.delta(1, 1),
+            king.delta(-1, -1),
+            king.delta(-1, 1),
+            king.delta(1, -1),
+        ].into_iter().filter_map(|x| x).collect();
+
+        self.generate_moves_from_target_squares(board, to_move, king, Piece::KING, &target_squares)
+    }
+
     fn generate_moves_from_trace_and_piece_positions(
-        &self, board: &GameState, 
+        &self, board: &GameState,
+        to_move: Color, 
         piece_positions: Vec<Position>, 
         piece: Piece,
         trace: &Vec<Vec<Vec<Position>>>) -> Vec<Move> {
 
         let mut moves = vec![];
         for piece_position in piece_positions {
-            let mut moves_from_position = self.generate_moves_from_trace_and_position(board, piece_position, piece, trace);
+            let mut moves_from_position = self.generate_moves_from_trace_and_position(board, to_move, piece_position, piece, trace);
             moves.append(&mut moves_from_position);
         }
+        moves
+    }
+
+    fn generate_moves_from_target_squares(
+        &self,
+        board: &GameState,
+        to_move: Color,
+        position: Position,
+        piece: Piece,
+        target_squares: &Vec<Position>) -> Vec<Move> {
+
+        let opposite_color = to_move.opposite();
+        let mut moves = vec![];
+
+        for square in target_squares {
+            match board.collide(*square) {
+                None => moves.push(
+                    Move {
+                        move_type: MoveType::Step,
+                        moving_piece: piece, 
+                        from: position,
+                        to: *square,
+                        last_en_passant: board.en_passant(),
+                        last_castling_rights: board.castling_rights, 
+                    }),
+                Some(color) if color == opposite_color => { 
+                    moves.push(
+                        Move { 
+                            move_type: MoveType::Capture(board.get_piece(*square).unwrap().0),
+                            moving_piece: piece,
+                            from: position,
+                            to: *square,
+                            last_en_passant: board.en_passant(),
+                            last_castling_rights: board.castling_rights,
+                        }); 
+                    break 
+                },
+                Some(color) if color != opposite_color => break,
+                _ => panic!("Not possible"),
+            }
+        }
+
         moves
     }
 
     fn generate_moves_from_trace_and_position(
         &self,
         board: &GameState,
+        to_move: Color,
         position: Position,
         piece: Piece,
         trace: &Vec<Vec<Vec<Position>>>) -> Vec<Move> {
 
-        let opposite_color = board.to_move().opposite();
         let mut moves = vec![];
 
         for ray in &trace[usize::from(position.to_numeric())] {
-            for to_move in ray {
-                match board.collide(*to_move) {
-                    None => moves.push(
-                        Move {
-                            move_type: MoveType::Step,
-                            moving_piece: piece, 
-                            from: position,
-                            to: *to_move,
-                            last_en_passant: board.en_passant(),
-                            last_castling_rights: board.castling_rights, 
-                        }),
-                    Some(color) if color == opposite_color => { 
-                        moves.push(
-                            Move { 
-                                move_type: MoveType::Capture(board.get_piece(*to_move).unwrap().0),
-                                moving_piece: piece,
-                                from: position,
-                                to: *to_move,
-                                last_en_passant: board.en_passant(),
-                                last_castling_rights: board.castling_rights,
-                            }); 
-                        break 
-                    },
-                    Some(color) if color != opposite_color => break,
-                    _ => panic!("Not possible"),
-                }
-            }
+            moves.append(&mut self.generate_moves_from_target_squares(board, to_move, position, piece, ray));
         }
 
         moves
