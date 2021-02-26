@@ -8,7 +8,6 @@ pub enum MoveType {
     Step,
     Capture(Piece),
     EnPassant,
-    Promotion(Piece),
     Castling,
 }
 
@@ -18,6 +17,7 @@ pub struct Move {
     pub moving_piece: Piece,
     pub from: Position,
     pub to: Position,
+    pub promotes_to: Option<Piece>,
     pub last_en_passant: Option<Position>,
     pub last_castling_rights: CastlingRights,
 }

@@ -33,8 +33,18 @@ impl MoveGenerator {
         self.generate_moves(board).into_iter().find(|m| m.to == to && m.from == from)
     }
 
+
+    pub fn generate_moves(&self, board: &GameState) ->Vec<Move> {
+        let candidate_moves = self.generate_moves_unchecked(board);
+        candidate_moves.into_iter().filter(|m| !self.is_check(&board.apply_move(*m))).collect()
+    }
+
+    fn is_check(&self, board: &GameState) -> bool {
+        (board.get_piece_mask(Piece::KING, board.to_move()) & self.generate_threats(board, board.to_move().opposite())) != 0
+    }
+
     // TODO: test performance with smallvec: https://github.com/servo/rust-smallvec
-    pub fn generate_moves(&self, board: &GameState) -> Vec<Move> {
+    pub fn generate_moves_unchecked(&self, board: &GameState) -> Vec<Move> {
         let mut moves = vec![];
         moves.append(&mut self.generate_queen_moves(board, board.to_move()));
         moves.append(&mut self.generate_rook_moves(board, board.to_move()));
@@ -105,6 +115,7 @@ impl MoveGenerator {
                         moving_piece: Piece::KING,
                         from: king,
                         to: positions[2],
+                        promotes_to: None,
                         last_en_passant: board.en_passant(),
                         last_castling_rights: board.castling_rights, 
                 });
@@ -125,6 +136,7 @@ impl MoveGenerator {
                         moving_piece: Piece::KING,
                         from: king,
                         to: positions[2],
+                        promotes_to: None,
                         last_en_passant: board.en_passant(),
                         last_castling_rights: board.castling_rights, 
                 });
@@ -201,6 +213,7 @@ impl MoveGenerator {
                         moving_piece: piece, 
                         from: position,
                         to: *square,
+                        promotes_to: None,
                         last_en_passant: board.en_passant(),
                         last_castling_rights: board.castling_rights, 
                     }),
@@ -211,6 +224,7 @@ impl MoveGenerator {
                             moving_piece: piece,
                             from: position,
                             to: *square,
+                            promotes_to: None,
                             last_en_passant: board.en_passant(),
                             last_castling_rights: board.castling_rights,
                         }); 
@@ -269,13 +283,26 @@ impl MoveGenerator {
 
         let mut one_step_moves = bit_mask_to_positions(valid_one_step_moves)
             .iter()
-            .map(|position| Move { 
-                move_type: MoveType::Step,
-                moving_piece: Piece::PAWN,
-                from: position.delta(0, -1 * direction_multiplier).unwrap(), 
-                to: *position,
-                last_en_passant: board.en_passant(),
-                last_castling_rights: board.castling_rights,
+            .flat_map(|position| {
+                let rank = position.rank();
+                let is_promotes_on_move = (rank == 7 && color == Color::WHITE) || (rank == 2 && color == Color::BLACK);
+                let move_to = position.delta(0, -1 * direction_multiplier).unwrap();
+
+                if is_promotes_on_move {
+                    self.get_pawn_promotions(board, *position, move_to, None)
+                } else {
+                    vec![
+                        Move { 
+                            move_type: MoveType::Step,
+                            moving_piece: Piece::PAWN,
+                            from: move_to, 
+                            to: *position,
+                            promotes_to: None,
+                            last_en_passant: board.en_passant(),
+                            last_castling_rights: board.castling_rights,
+                        }
+                    ]
+                }
             })
             .collect();
 
@@ -287,6 +314,7 @@ impl MoveGenerator {
                     moving_piece: Piece::PAWN,
                     from: position.delta(0, -2 * direction_multiplier).unwrap(),
                     to: *position,
+                    promotes_to: None,
                     last_en_passant: board.en_passant(),
                     last_castling_rights: board.castling_rights,
                 })
@@ -298,7 +326,7 @@ impl MoveGenerator {
         moves
     }
 
-    // no en passant
+    // does not include en passant captures
     fn generate_pawn_captures(&self, board: &GameState, color: Color) -> Vec<Move> {
         let current_pawns = board.get_piece_mask(Piece::PAWN, color);
 
@@ -317,38 +345,76 @@ impl MoveGenerator {
 
         for square in bit_mask_to_positions(valid_captures) {
             let file = square.file();
+            let rank = square.rank();
             let pawn_mask = board.get_piece_mask(Piece::PAWN, color);
+            let is_promotes_on_move = (rank == 7 && color == Color::WHITE) || (rank == 2 && color == Color::BLACK);
 
             let left_candidate = square.delta(-1, -direction_multiplier);
             if file != 1 && pawn_mask & left_candidate.unwrap().to_bit_mask() > 0 {
-                moves.push(
-                    Move { 
-                        move_type: MoveType::Capture(board.get_piece(square).unwrap().0),
-                        moving_piece: Piece::PAWN,
-                        from: left_candidate.unwrap(),
-                        to: square,
-                        last_en_passant: board.en_passant(),
-                        last_castling_rights: board.castling_rights,
-                    });
+                let captured_piece = board.get_piece(square).unwrap().0;
+
+                if is_promotes_on_move {
+                    moves.append(&mut self.get_pawn_promotions(board, left_candidate.unwrap(), square, Some(captured_piece)));
+                } else {
+                    moves.push(
+                        Move { 
+                            move_type: MoveType::Capture(captured_piece),
+                            moving_piece: Piece::PAWN,
+                            from: left_candidate.unwrap(),
+                            to: square,
+                            promotes_to: None,
+                            last_en_passant: board.en_passant(),
+                            last_castling_rights: board.castling_rights,
+                        }
+                    );
+                }
             }
+
             let right_candidate = square.delta(1, -direction_multiplier); 
             if file != 8 && pawn_mask & right_candidate.unwrap().to_bit_mask() > 0 {
-                moves.push(
-                    Move { 
-                        move_type: MoveType::Capture(board.get_piece(square).unwrap().0),
-                        moving_piece: Piece::PAWN,
-                        from: right_candidate.unwrap(),
-                        to: square,
-                        last_en_passant: board.en_passant(),
-                        last_castling_rights: board.castling_rights,
-                    });
+                let captured_piece = board.get_piece(square).unwrap().0;
+                
+                if is_promotes_on_move {
+                    moves.append(&mut self.get_pawn_promotions(board, right_candidate.unwrap(), square, Some(captured_piece)));
+                } else {
+                    moves.push(
+                        Move { 
+                            move_type: MoveType::Capture(captured_piece),
+                            moving_piece: Piece::PAWN,
+                            from: right_candidate.unwrap(),
+                            to: square,
+                            promotes_to: None,
+                            last_en_passant: board.en_passant(),
+                            last_castling_rights: board.castling_rights,
+                        }
+                    ); 
+                }
             }
         }
 
         moves
      }
 
-     // not supported yet, add an en passant mask to game state and update on each apply_move call
+     fn get_pawn_promotions(&self, board: &GameState, from: Position, to: Position, capture: Option<Piece>) -> Vec<Move> {
+        let mut promotions = vec![];
+        let pieces = [Piece::QUEEN, Piece::ROOK, Piece::BISHOP, Piece::KNIGHT];
+        
+        for piece in pieces.iter() {
+            promotions.push(
+                Move { 
+                    move_type: capture.map(|p| MoveType::Capture(p)).unwrap_or(MoveType::Step),
+                    moving_piece: Piece::PAWN,
+                    from: from,
+                    to: to,
+                    promotes_to: Some(*piece),
+                    last_en_passant: board.en_passant(),
+                    last_castling_rights: board.castling_rights,
+                }
+            );
+        }
+        promotions
+     }
+
      fn generate_en_passant_captures(&self, board: &GameState) -> Vec<Move> {
         let current_pawns = board.get_piece_mask(Piece::PAWN, board.to_move());
         let direction_multiplier = if board.to_move() == Color::WHITE { 1 } else { -1 };
@@ -365,6 +431,7 @@ impl MoveGenerator {
                     moving_piece: Piece::PAWN,
                     from: en_passant_square.delta(-1, 0).unwrap(),
                     to: en_passant_square.delta(0, direction_multiplier).unwrap(),
+                    promotes_to: None,
                     last_en_passant: board.en_passant(),
                     last_castling_rights: board.castling_rights,
                 };
@@ -377,6 +444,7 @@ impl MoveGenerator {
                     moving_piece: Piece::PAWN,
                     from: en_passant_square.delta(1, 0).unwrap(),
                     to: en_passant_square.delta(0, direction_multiplier).unwrap(),
+                    promotes_to: None,
                     last_en_passant: board.en_passant(),
                     last_castling_rights: board.castling_rights,
                 };

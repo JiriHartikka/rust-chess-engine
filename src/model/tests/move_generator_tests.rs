@@ -8,6 +8,7 @@ fn test_moves_for_scandinavian_opening_sequence() {
         to: Position::new(5, 4),
         move_type: MoveType::Step,
         moving_piece: Piece::PAWN,
+        promotes_to: None,
         last_en_passant: None, 
         last_castling_rights: CastlingRights::initial(),
     };
@@ -16,6 +17,7 @@ fn test_moves_for_scandinavian_opening_sequence() {
         to: Position::new(4, 5),
         move_type: MoveType::Step,
         moving_piece: Piece::PAWN,
+        promotes_to: None,
         last_en_passant: Some(Position::new(5, 4)),
         last_castling_rights: CastlingRights::initial(),
     };
@@ -24,7 +26,8 @@ fn test_moves_for_scandinavian_opening_sequence() {
         from: Position::new(5, 4),
         to: Position::new(4, 5),
         move_type: MoveType::Capture(Piece::PAWN),
-        moving_piece: Piece::PAWN, 
+        moving_piece: Piece::PAWN,
+        promotes_to: None, 
         last_en_passant: Some(Position::new(4, 5)),
         last_castling_rights: CastlingRights::initial(),
     };
@@ -33,7 +36,8 @@ fn test_moves_for_scandinavian_opening_sequence() {
         from: Position::new(4, 8),
         to: Position::new(4, 5),
         move_type: MoveType::Capture(Piece::PAWN),
-        moving_piece: Piece::QUEEN, 
+        moving_piece: Piece::QUEEN,
+        promotes_to: None, 
         last_en_passant: None,
         last_castling_rights: CastlingRights::initial(),
     };
@@ -69,7 +73,8 @@ fn test_opening_sequence_with_en_passant() {
         from: Position::new(5, 2),
         to: Position::new(5, 4),
         move_type: MoveType::Step,
-        moving_piece: Piece::PAWN, 
+        moving_piece: Piece::PAWN,
+        promotes_to: None, 
         last_en_passant: None,
         last_castling_rights: CastlingRights::initial(),
     };
@@ -79,6 +84,7 @@ fn test_opening_sequence_with_en_passant() {
         to: Position::new(6, 6),
         move_type: MoveType::Step,
         moving_piece: Piece::KNIGHT,
+        promotes_to: None,
         last_en_passant: Some(Position::new(5, 4)),
         last_castling_rights: CastlingRights::initial(),
     };
@@ -87,7 +93,8 @@ fn test_opening_sequence_with_en_passant() {
         from: Position::new(5, 4),
         to: Position::new(5, 5),
         move_type: MoveType::Step,
-        moving_piece: Piece::PAWN, 
+        moving_piece: Piece::PAWN,
+        promotes_to: None, 
         last_en_passant: None,
         last_castling_rights: CastlingRights::initial(),
     };
@@ -96,7 +103,8 @@ fn test_opening_sequence_with_en_passant() {
         from: Position::new(4, 7),
         to: Position::new(4, 5),
         move_type: MoveType::Step,
-        moving_piece: Piece::PAWN, 
+        moving_piece: Piece::PAWN,
+        promotes_to: None, 
         last_en_passant: None,
         last_castling_rights: CastlingRights::initial(),
     };
@@ -106,6 +114,7 @@ fn test_opening_sequence_with_en_passant() {
         to: Position::new(4, 6),
         move_type: MoveType::EnPassant,
         moving_piece: Piece::PAWN, 
+        promotes_to: None,
         last_en_passant: Some(Position::new(4, 5)),
         last_castling_rights: CastlingRights::initial(),
     };
