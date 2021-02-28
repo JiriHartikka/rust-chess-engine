@@ -46,25 +46,25 @@ fn test_moves_for_scandinavian_opening_sequence() {
     let move_generator = move_generator::MoveGenerator::new();
     let mut valid_moves = move_generator.generate_moves(&game_state);
 
-    assert!(valid_moves.contains(&e4));
-    assert!(!valid_moves.contains(&d5));
+    assert!(valid_moves.moves.contains(&e4));
+    assert!(!valid_moves.moves.contains(&d5));
 
     game_state = game_state.apply_move(e4);
     valid_moves = move_generator.generate_moves(&game_state);
 
-    assert!(!valid_moves.contains(&e4));
-    assert!(!valid_moves.contains(&qxd5));
-    assert!(valid_moves.contains(&d5));
+    assert!(!valid_moves.moves.contains(&e4));
+    assert!(!valid_moves.moves.contains(&qxd5));
+    assert!(valid_moves.moves.contains(&d5));
 
     game_state = game_state.apply_move(d5);
     valid_moves = move_generator.generate_moves(&game_state);
 
-    assert!(valid_moves.contains(&exd5));
+    assert!(valid_moves.moves.contains(&exd5));
 
     game_state = game_state.apply_move(exd5);
     valid_moves = move_generator.generate_moves(&game_state);
 
-    assert!(valid_moves.contains(&qxd5));
+    assert!(valid_moves.moves.contains(&qxd5));
 }
 
 #[test]
@@ -124,27 +124,27 @@ fn test_opening_sequence_with_en_passant() {
     let move_generator = move_generator::MoveGenerator::new();
     let mut valid_moves = move_generator.generate_moves(&game_state);
 
-    assert!(valid_moves.contains(&e4));
+    assert!(valid_moves.moves.contains(&e4));
 
     game_state = game_state.apply_move(e4);
     valid_moves = move_generator.generate_moves(&game_state);
 
-    assert!(valid_moves.contains(&nf6));
+    assert!(valid_moves.moves.contains(&nf6));
 
     game_state = game_state.apply_move(nf6);
     valid_moves = move_generator.generate_moves(&game_state);
 
-    assert!(valid_moves.contains(&e5));
+    assert!(valid_moves.moves.contains(&e5));
 
     game_state = game_state.apply_move(e5);
     valid_moves = move_generator.generate_moves(&game_state);
 
-    assert!(valid_moves.contains(&d5));
+    assert!(valid_moves.moves.contains(&d5));
 
     game_state = game_state.apply_move(d5);
     valid_moves = move_generator.generate_moves(&game_state);
 
-    assert!(valid_moves.contains(&exd5));
+    assert!(valid_moves.moves.contains(&exd5));
 }
 
 #[test]
@@ -158,21 +158,21 @@ fn test_castling_move_generation() {
     game_state.apply_move_mut(move_generator.get_move(&game_state, Position::new(5, 2), Position::new(5, 3)).unwrap());
     game_state.apply_move_mut(move_generator.get_move(&game_state, Position::new(5, 7), Position::new(5, 6)).unwrap());
 
-    assert!(move_generator.generate_moves(&game_state).iter().all(|m| !matches!(m.move_type, MoveType::Castling)));
+    assert!(move_generator.generate_moves(&game_state).moves.iter().all(|m| !matches!(m.move_type, MoveType::Castling)));
 
     game_state.apply_move_mut(move_generator.get_move(&game_state, Position::new(6, 1), Position::new(5, 2)).unwrap());
 
-    assert!(move_generator.generate_moves(&game_state).iter().all(|m| !matches!(m.move_type, MoveType::Castling)));
+    assert!(move_generator.generate_moves(&game_state).moves.iter().all(|m| !matches!(m.move_type, MoveType::Castling)));
 
     game_state.apply_move_mut(move_generator.get_move(&game_state, Position::new(6, 8), Position::new(5, 7)).unwrap());
 
-    let white_castling_king_side = move_generator.generate_moves(&game_state).into_iter().find(|m| matches!(m.move_type, MoveType::Castling)).unwrap();
+    let white_castling_king_side = move_generator.generate_moves(&game_state).moves.into_iter().find(|m| matches!(m.move_type, MoveType::Castling)).unwrap();
     assert_eq!(Position::new(7, 1), white_castling_king_side.to);
     assert_eq!(Position::new(5, 1), white_castling_king_side.from);
     
     game_state.apply_move_mut(move_generator.get_move(&game_state, Position::new(5, 1), Position::new(7, 1)).unwrap());
 
-    let black_castling_king_side = move_generator.generate_moves(&game_state).into_iter().find(|m| matches!(m.move_type, MoveType::Castling)).unwrap();
+    let black_castling_king_side = move_generator.generate_moves(&game_state).moves.into_iter().find(|m| matches!(m.move_type, MoveType::Castling)).unwrap();
     assert_eq!(Position::new(7, 8), black_castling_king_side.to);
     assert_eq!(Position::new(5, 8), black_castling_king_side.from);
 }

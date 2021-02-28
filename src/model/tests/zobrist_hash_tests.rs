@@ -11,7 +11,7 @@ fn zobrish_hash_is_reversible_from_starting_position() {
 
     let mut initial_state_clone = initial_state.clone();
 
-    for next_move in valid_moves {
+    for next_move in valid_moves.moves {
         assert_eq!(initial_state.zobrist_hash, initial_state_clone.zobrist_hash);
         initial_state_clone.apply_move_mut(next_move);
         assert_ne!(initial_state.zobrist_hash, initial_state_clone.zobrist_hash);

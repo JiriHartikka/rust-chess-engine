@@ -39,9 +39,16 @@ pub fn attack_trace_for_bishop() -> Vec<Vec<Vec<Position>>> {
 }
 
 pub fn attack_trace_for_queen() -> Vec<Vec<Vec<Position>>> {
-    let mut queen_trace = attack_trace_for_rook();
-    queen_trace.append(&mut attack_trace_for_bishop());
-    queen_trace
+    let rook_trace = attack_trace_for_rook();
+    let bishop_trace = attack_trace_for_bishop();
+    rook_trace
+        .into_iter()
+        .zip(bishop_trace.into_iter())
+        .map(|(mut rook_trace_pos, mut bishop_trace_pos)| { 
+            rook_trace_pos.append(&mut bishop_trace_pos); 
+            rook_trace_pos 
+        })
+        .collect()
 }
 
 pub fn attack_trace_for_knight() -> Vec<Vec<Vec<Position>>> {

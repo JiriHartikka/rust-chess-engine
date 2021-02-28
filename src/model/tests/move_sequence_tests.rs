@@ -11,7 +11,7 @@ fn all_moves_from_starting_position_are_revertible() {
 
     let mut initial_state_clone = initial_state.clone();
 
-    for next_move in valid_moves {
+    for next_move in valid_moves.moves {
         assert_eq!(initial_state, initial_state_clone);
         initial_state_clone.apply_move_mut(next_move);
         assert_ne!(initial_state, initial_state_clone);

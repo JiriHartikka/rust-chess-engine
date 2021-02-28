@@ -40,14 +40,14 @@ impl CastlingRights {
         }
     }
 
-    pub fn none(color: Color) -> CastlingRights {
+    /*pub fn none(color: Color) -> CastlingRights {
         CastlingRights {
             white_king_side: color == Color::BLACK,
             white_queen_side: color == Color::BLACK,
             black_king_side: color == Color::WHITE,
             black_queen_side: color == Color::WHITE,
         }
-    }
+    }*/
 
     pub fn get_king_side_mut(&mut self, color: Color) -> &mut bool {
         if color == Color::WHITE {
@@ -319,7 +319,15 @@ impl GameState {
         match to_apply.move_type {
             MoveType::Capture(captured_piece) => {
                 let new_state_taken_piece_mask = self.get_piece_mask_mut(captured_piece, self.to_move().opposite());
-                *new_state_taken_piece_mask = *new_state_taken_piece_mask ^ to_apply.to.to_bit_mask();
+                *new_state_taken_piece_mask ^= to_apply.to.to_bit_mask();
+
+                if captured_piece == Piece::ROOK {
+                    if to_apply.to.file() == 1 {
+                        *self.castling_rights.get_queen_side_mut(self.to_move().opposite()) = false;
+                    } else if to_apply.to.file() == 8 {
+                        *self.castling_rights.get_king_side_mut(self.to_move().opposite()) = false;
+                    }
+                }
             },
             MoveType::EnPassant => {
                 let direction_multiplier = if self.to_move == Color::WHITE { 1 } else { -1 };
@@ -334,17 +342,25 @@ impl GameState {
                 let rook_piece_mask = self.get_piece_mask_mut(Piece::ROOK, self.to_move());
                 *rook_piece_mask = *rook_piece_mask ^ old_rook_position.to_bit_mask();
                 *rook_piece_mask = *rook_piece_mask ^ new_rook_position.to_bit_mask();
-                self.castling_rights = CastlingRights::none(self.to_move());
+                *self.castling_rights.get_king_side_mut(self.to_move) = false;
+                *self.castling_rights.get_queen_side_mut(self.to_move) = false;
             },
             _ => (),
         }
 
-        // the moving piece type's bit mask is cleared from move's origin and set to destination
-        let new_piece_mask_for_moving = piece_mask_for_moving ^ (to_apply.from.to_bit_mask() | to_apply.to.to_bit_mask());
+        let mut moving_piece_zor = to_apply.from.to_bit_mask();
 
-        let new_state_moving_piece_mask = self.get_piece_mask_mut(moving_piece, self.to_move());
-        // update bit mask for moving piece
-        *new_state_moving_piece_mask = new_piece_mask_for_moving;
+        match to_apply.promotes_to {
+            None => {
+                moving_piece_zor = moving_piece_zor | to_apply.to.to_bit_mask();
+            },
+            Some(piece) => {
+                *self.get_piece_mask_mut(piece, self.to_move) ^= to_apply.to.to_bit_mask(); 
+            },
+        }
+
+        // update moving piece 
+        *self.get_piece_mask_mut(moving_piece, self.to_move()) = piece_mask_for_moving ^ moving_piece_zor;
 
         // set en passant bit mask
         if moving_piece == Piece::PAWN {
@@ -360,7 +376,8 @@ impl GameState {
 
         // lose all castling rights when king moves
         if moving_piece == Piece::KING {
-            self.castling_rights = CastlingRights::none(self.to_move());
+            *self.castling_rights.get_king_side_mut(self.to_move) = false;
+            *self.castling_rights.get_queen_side_mut(self.to_move) = false;
         }
 
         // lose queen side castling rights when queen side rook moves 
@@ -400,17 +417,24 @@ impl GameState {
                 let rook_piece_mask = self.get_piece_mask_mut(Piece::ROOK, self.to_move().opposite());
                 *rook_piece_mask = *rook_piece_mask ^ old_rook_position.to_bit_mask();
                 *rook_piece_mask = *rook_piece_mask ^ new_rook_position.to_bit_mask();
-                self.castling_rights = CastlingRights::none(self.to_move().opposite());
             },
             _ => (),
         }
 
-        // the moving piece type's bit mask is cleared from move's origin and set to destination
-        let new_piece_mask_for_moving = piece_mask_for_moving ^ (to_unapply.from.to_bit_mask() | to_unapply.to.to_bit_mask());
+        let mut moving_piece_zor = to_unapply.from.to_bit_mask();
 
-        let new_state_moving_piece_mask = self.get_piece_mask_mut(moving_piece, self.to_move().opposite());
-        // update bit mask for moving piece
-        *new_state_moving_piece_mask = new_piece_mask_for_moving;
+        match to_unapply.promotes_to {
+            None => {
+                moving_piece_zor = moving_piece_zor | to_unapply.to.to_bit_mask();
+            },
+            Some(piece) => {
+                *self.get_piece_mask_mut(piece, self.to_move.opposite()) ^= to_unapply.to.to_bit_mask(); 
+            },
+        }
+
+        // update moving piece 
+        *self.get_piece_mask_mut(moving_piece, self.to_move().opposite()) = piece_mask_for_moving ^ moving_piece_zor;
+
 
         self.en_passant = to_unapply.last_en_passant;
         self.castling_rights = to_unapply.last_castling_rights;
