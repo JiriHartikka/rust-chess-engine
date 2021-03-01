@@ -23,7 +23,11 @@ fn negamax_alpha_beta_helper(game_state: &mut GameState, move_generator: &MoveGe
 
     let next_moves = move_generator.generate_moves(game_state);
 
-    if next_moves.is_empty() {
+    if next_moves.is_checkmate() {
+        return (None, color_multiplier * EVAL_MAX, 1);
+    }
+
+    if next_moves.moves.is_empty() {
         return (None, color_multiplier * evaluator::evaluate(&game_state), 1);
     }
 
@@ -34,7 +38,7 @@ fn negamax_alpha_beta_helper(game_state: &mut GameState, move_generator: &MoveGe
     let mut node_count: u64 = 1;
     let mut current_alpha = alpha;
 
-    for next_move in next_moves {
+    for next_move in next_moves.moves {
         game_state.apply_move_mut(next_move);
         let (_, eval, child_node_count) = negamax_alpha_beta_helper(game_state, move_generator, -beta, -current_alpha, depth - 1);
         game_state.unapply_move_mut(next_move);
@@ -96,7 +100,11 @@ fn negamax_alpha_beta_with_trasposition_table_helper(game_state: &mut GameState,
 
     let next_moves = move_generator.generate_moves(game_state);
 
-    if next_moves.is_empty() {
+    if next_moves.is_checkmate() {
+        return (None, color_multiplier * EVAL_MAX, 1);
+    }
+
+    if next_moves.moves.is_empty() {
         return (None, color_multiplier * evaluator::evaluate(&game_state), 1);
     }
 
@@ -106,7 +114,7 @@ fn negamax_alpha_beta_with_trasposition_table_helper(game_state: &mut GameState,
     let mut best_move = None;
     let mut node_count: u64 = 1;
 
-    for next_move in next_moves {
+    for next_move in next_moves.moves {
         game_state.apply_move_mut(next_move);
         let (_, eval, child_node_count) = negamax_alpha_beta_with_trasposition_table_helper(game_state, move_generator, table, -current_beta, -current_alpha, depth - 1, starting_depth);
         game_state.unapply_move_mut(next_move);

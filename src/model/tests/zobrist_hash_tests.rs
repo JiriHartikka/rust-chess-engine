@@ -11,7 +11,7 @@ fn zobrish_hash_is_reversible_from_starting_position() {
 
     let mut initial_state_clone = initial_state.clone();
 
-    for next_move in valid_moves {
+    for next_move in valid_moves.moves {
         assert_eq!(initial_state.zobrist_hash, initial_state_clone.zobrist_hash);
         initial_state_clone.apply_move_mut(next_move);
         assert_ne!(initial_state.zobrist_hash, initial_state_clone.zobrist_hash);
@@ -28,6 +28,7 @@ fn zobrist_hash_is_reversible_in_scandinavian_starting_sequence() {
             to: Position::new(5, 4),
             move_type: MoveType::Step,
             moving_piece: Piece::PAWN,
+            promotes_to: None,
             last_en_passant: None, 
             last_castling_rights: CastlingRights::initial(),
         },
@@ -36,6 +37,7 @@ fn zobrist_hash_is_reversible_in_scandinavian_starting_sequence() {
             to: Position::new(4, 5),
             move_type: MoveType::Step,
             moving_piece: Piece::PAWN,
+            promotes_to: None,
             last_en_passant: Some(Position::new(5, 4)),
             last_castling_rights: CastlingRights::initial(),
         },
@@ -44,6 +46,7 @@ fn zobrist_hash_is_reversible_in_scandinavian_starting_sequence() {
             to: Position::new(4, 5),
             move_type: MoveType::Capture(Piece::PAWN),
             moving_piece: Piece::PAWN, 
+            promotes_to: None,
             last_en_passant: Some(Position::new(4, 5)),
             last_castling_rights: CastlingRights::initial(),
         },
@@ -52,6 +55,7 @@ fn zobrist_hash_is_reversible_in_scandinavian_starting_sequence() {
             to: Position::new(4, 5),
             move_type: MoveType::Capture(Piece::PAWN),
             moving_piece: Piece::QUEEN, 
+            promotes_to: None,
             last_en_passant: None,
             last_castling_rights: CastlingRights::initial(),
         }

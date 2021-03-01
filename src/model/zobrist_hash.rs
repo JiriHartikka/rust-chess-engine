@@ -1,9 +1,14 @@
 use rand;
 use rand::{SeedableRng, RngCore};
 
-use super::game_state::{GameState, Piece, Color, Position, Move, MoveType};
+use super::game_state::{GameState, Piece, Color, Position, Move, MoveType, CastlingRights};
 
 const ZOBRIST_SEED: u64 = 123456;
+
+const WHITE_KING_SIDE: usize = 0;
+const WHITE_QUEEN_SIDE: usize = 1;
+const BLACK_KING_SIDE: usize = 2;
+const BLACK_QUEEN_SIDE: usize = 3;
 
 lazy_static! {
     static ref ZOBIRST: ZobristHasher = ZobristHasher::new(ZOBRIST_SEED);
@@ -13,12 +18,14 @@ pub fn hash(game_state: &GameState) -> u64 {
     ZOBIRST.hash(game_state)
 }
 
-pub fn apply_move(current_hash: u64, to_apply: Move, to_move: Color) -> u64 {
-    ZOBIRST.apply_move(current_hash, to_apply, to_move)
+pub fn apply_move(current_hash: u64, castling_rights: &CastlingRights, to_apply: Move, to_move: Color) -> u64 {
+    let next_hash = ZOBIRST.apply_move(current_hash, to_apply, to_move);
+    ZOBIRST.apply_castling_rights(next_hash, *castling_rights, to_apply, to_move)
 }
 
-pub fn unapply_move(current_hash: u64, to_unapply: Move, to_move: Color) -> u64 {
-    ZOBIRST.unapply_move(current_hash, to_unapply, to_move)
+pub fn unapply_move(current_hash: u64, castling_rights: &CastlingRights, to_unapply: Move, to_move: Color) -> u64 {
+    let next_hash = ZOBIRST.unapply_move(current_hash, to_unapply, to_move);
+    ZOBIRST.unapply_castling_rights(next_hash, *castling_rights, to_unapply, to_move)
 }
 
 struct ZobristHasher {
@@ -106,7 +113,7 @@ impl ZobristHasher {
         match to_apply.move_type {
             MoveType::Capture(captured_piece) => {
                 let captured_piece_index = zobrist_index_for_piece(captured_piece, to_move);
-                new_hash = new_hash ^ self.pieces[to_square_index][captured_piece_index];
+                new_hash ^= self.pieces[to_square_index][captured_piece_index];
             },
             MoveType::EnPassant => {
                 let direction_multiplier = if to_move == Color::WHITE { 1 } else { -1 };
@@ -114,11 +121,28 @@ impl ZobristHasher {
                 let captured_piece_index = zobrist_index_for_piece(Piece::PAWN, to_move.opposite());
                 new_hash = new_hash ^ self.pieces[captured_square_index][captured_piece_index];
             },
+            MoveType::Castling => {
+                let rank = to_apply.from.rank();
+                let (old_rook_file, new_rook_file) = if to_apply.to.file() < 5 { (1, 4) } else { (8, 6) };
+                let old_rook_position_index = usize::from(Position::new(old_rook_file, rank).to_numeric());
+                let new_rook_position_index = usize::from(Position::new(new_rook_file, rank).to_numeric());
+                let rook_piece_index = zobrist_index_for_piece(Piece::ROOK, to_move);
+                new_hash ^= self.pieces[old_rook_position_index][rook_piece_index];
+                new_hash ^= self.pieces[new_rook_position_index][rook_piece_index];
+            },
             _ => (),
         }
 
-        new_hash = new_hash ^ self.pieces[from_square_index][moving_piece_index];
-        new_hash = new_hash ^ self.pieces[to_square_index][moving_piece_index];
+        new_hash ^= self.pieces[from_square_index][moving_piece_index];
+
+        match to_apply.promotes_to {
+            None => {
+                new_hash ^= self.pieces[to_square_index][moving_piece_index];
+            },
+            Some(piece) => {
+                new_hash ^= self.pieces[to_square_index][zobrist_index_for_piece(piece, to_move)];
+            },
+        }
 
         if let Some(en_passant) = to_apply.last_en_passant {
             new_hash = new_hash ^ self.en_passant[usize::from(en_passant.to_numeric())];
@@ -149,33 +173,152 @@ impl ZobristHasher {
         match to_unapply.move_type {
             MoveType::Capture(captured_piece) => {
                 let piece_index = zobrist_index_for_piece(captured_piece, to_move.opposite());
-                new_hash = new_hash ^ self.pieces[to_square_index][piece_index];
+                new_hash ^= self.pieces[to_square_index][piece_index];
             },
             MoveType::EnPassant => {
                 let direction_multiplier = if to_move.opposite() == Color::WHITE { 1 } else { -1 };
                 let captured_square_index = usize::from(to_unapply.to.delta(0, -direction_multiplier).unwrap().to_numeric());
                 let captured_piece_index = zobrist_index_for_piece(Piece::PAWN, to_move);
-                new_hash = new_hash ^ self.pieces[captured_square_index][captured_piece_index];
+                new_hash ^= self.pieces[captured_square_index][captured_piece_index];
+            },
+            MoveType::Castling => {
+                let rank = to_unapply.from.rank();
+                let (old_rook_file, new_rook_file) = if to_unapply.to.file() < 5 { (1, 4) } else { (8, 6) };
+                let old_rook_position_index = usize::from(Position::new(old_rook_file, rank).to_numeric());
+                let new_rook_position_index = usize::from(Position::new(new_rook_file, rank).to_numeric());
+                let rook_piece_index = zobrist_index_for_piece(Piece::ROOK, to_move.opposite());
+                new_hash ^= self.pieces[old_rook_position_index][rook_piece_index];
+                new_hash ^= self.pieces[new_rook_position_index][rook_piece_index];
             },
             _ => (),
         }
 
-        new_hash = new_hash ^ self.pieces[from_square_index][moving_piece_index];
-        new_hash = new_hash ^ self.pieces[to_square_index][moving_piece_index];
+        new_hash ^= self.pieces[from_square_index][moving_piece_index];
+
+
+        match to_unapply.promotes_to {
+            None => {
+                new_hash ^= self.pieces[to_square_index][moving_piece_index];
+            },
+            Some(piece) => {
+                new_hash ^= self.pieces[to_square_index][zobrist_index_for_piece(piece, to_move.opposite())];
+            },
+        }
 
         if let Some(en_passant) = to_unapply.last_en_passant {
-            new_hash = new_hash ^ self.en_passant[usize::from(en_passant.to_numeric())];
+            new_hash ^= self.en_passant[usize::from(en_passant.to_numeric())];
         }
 
         if moving_piece == Piece::PAWN {
             let is_two_steps_move = 
                 i16::abs(i16::from(to_unapply.from.to_numeric()) - i16::from(to_unapply.to.to_numeric())) == 16;
             if is_two_steps_move {
-                new_hash = new_hash ^ self.en_passant[usize::from(to_unapply.to.to_numeric())];
+                new_hash ^= self.en_passant[usize::from(to_unapply.to.to_numeric())];
             }
         }
 
         new_hash = new_hash ^ self.to_move_white;
+
+        new_hash
+    }
+
+    fn apply_castling_rights(&self, current_hash: u64, castling_rights: CastlingRights, m: Move, to_move: Color) -> u64 {
+        let mut new_hash = current_hash;
+
+        let moving_piece = m.moving_piece;
+        // lose all castling rights when king moves
+        if moving_piece == Piece::KING {
+            if to_move == Color::WHITE {
+                if castling_rights.white_king_side {
+                    new_hash ^= self.castling_rights[WHITE_KING_SIDE]; 
+                }
+                if castling_rights.white_queen_side {
+                    new_hash ^= self.castling_rights[WHITE_QUEEN_SIDE];
+                }
+            } else {
+                if castling_rights.black_king_side {
+                    new_hash ^= self.castling_rights[BLACK_KING_SIDE];
+                }
+                if castling_rights.black_queen_side {
+                    new_hash ^= self.castling_rights[BLACK_QUEEN_SIDE];
+                }
+            }
+        }
+
+        // lose queen side castling rights when queen side rook moves 
+        if moving_piece == Piece::ROOK && m.from.file() == 1 {
+            if to_move == Color::WHITE {
+                if castling_rights.white_queen_side {
+                    new_hash ^= self.castling_rights[WHITE_QUEEN_SIDE];
+                }
+            } else {
+                if castling_rights.black_queen_side {
+                    new_hash ^= self.castling_rights[BLACK_QUEEN_SIDE];
+                }
+            }
+        }
+
+        // lose king side castling rights when king side rook moves
+        if moving_piece == Piece::ROOK && m.from.file() == 8 {
+            if to_move == Color::WHITE {
+                if castling_rights.white_king_side {
+                    new_hash ^= self.castling_rights[WHITE_KING_SIDE];
+                }
+            } else {
+                if castling_rights.black_king_side {
+                    new_hash ^= self.castling_rights[BLACK_KING_SIDE];
+                }
+            }
+        }
+
+        // lose castling rights when rook is captured
+        match m.move_type {
+            MoveType::Capture(Piece::ROOK) => {
+                if m.to.file() == 1 {
+                    if to_move == Color::WHITE {
+                        if castling_rights.black_queen_side {
+                            new_hash ^= self.castling_rights[BLACK_QUEEN_SIDE];
+                        }
+                    } else {
+                        if castling_rights.white_queen_side {
+                            new_hash ^= self.castling_rights[WHITE_QUEEN_SIDE];
+                        }
+                    }
+                } else if m.to.file() == 8 {
+                    if to_move == Color::WHITE {
+                        if castling_rights.black_king_side {
+                            new_hash ^= self.castling_rights[BLACK_KING_SIDE];
+                        }
+                    } else {
+                        if castling_rights.white_king_side {
+                            new_hash ^= self.castling_rights[WHITE_KING_SIDE];
+                        }
+                    }
+                }
+            
+            },
+            _ => (),
+        } 
+
+        new_hash
+    }
+
+    fn unapply_castling_rights(&self, current_hash: u64, castling_rights: CastlingRights, m: Move, to_move: Color) -> u64 {
+        let mut new_hash = current_hash;
+        let last_castling_rights = m.last_castling_rights;
+
+        if castling_rights.white_king_side != last_castling_rights.white_king_side {
+            new_hash ^= self.castling_rights[WHITE_KING_SIDE];
+        }
+        if castling_rights.white_queen_side != last_castling_rights.white_queen_side {
+            new_hash ^= self.castling_rights[WHITE_QUEEN_SIDE];
+        }
+        if castling_rights.black_king_side != last_castling_rights.black_king_side {
+            new_hash ^= self.castling_rights[BLACK_KING_SIDE];
+        }
+        if castling_rights.black_queen_side != last_castling_rights.black_queen_side {
+            new_hash ^= self.castling_rights[BLACK_QUEEN_SIDE];
+        }
 
         new_hash
     }
