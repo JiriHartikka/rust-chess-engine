@@ -6,22 +6,22 @@ use crate::search::minimax_search::negamax_alpha_beta_with_trasposition_table;
 use std::io::{self, BufRead, Write};
 use std::convert::TryFrom;
 
-pub struct ChessAgent {
-    color: Color,
+pub struct Game {
+    ai_color: Color,
     game_state: GameState,
     move_generator: MoveGenerator,
     transposition_table: TranspositionTable,
     search_depth: u16,
 }
 
-impl ChessAgent {
-    pub fn new(color: Color, depth: u16) -> Self {
+impl Game {
+    pub fn new(ai_color: Color, depth: u16) -> Self {
         let game_state = GameState::new();
         let transposition_table = TranspositionTable::with_capacity(1_000_000);
         let move_generator = MoveGenerator::new();
 
-        ChessAgent {
-            color,
+        Game {
+            ai_color: ai_color,
             game_state: game_state,
             move_generator: move_generator,
             transposition_table: transposition_table,
@@ -32,8 +32,8 @@ impl ChessAgent {
     pub fn proceed(&mut self) -> bool {
         println!("{:?}", self.game_state);
 
-        if self.game_state.to_move() == self.color {
-            let (maybe_best_move, best_eval, node_count) = negamax_alpha_beta_with_trasposition_table(&mut self.game_state, &self.move_generator, &mut self.transposition_table, self.search_depth);
+        if self.game_state.to_move() == self.ai_color {
+            let (maybe_best_move, _, _) = negamax_alpha_beta_with_trasposition_table(&mut self.game_state, &self.move_generator, &mut self.transposition_table, self.search_depth);
             if let Some(best_move) = maybe_best_move {
                 self.game_state.apply_move_mut(best_move);
             } else {
@@ -65,17 +65,15 @@ impl ChessAgent {
                 (_, _) => continue,
             };
             
-            let pos1 = ChessAgent::parse_position(
+            let pos1 = Game::parse_position(
                 pos1_raw.chars().nth(0).unwrap(),
                 pos1_raw.chars().nth(1).unwrap()
             );
 
-            let pos2 = ChessAgent::parse_position(
+            let pos2 = Game::parse_position(
                 pos2_raw.chars().nth(0).unwrap(),
                 pos2_raw.chars().nth(1).unwrap()
             );
-
-            println!("from: {:?}, to {:?}", pos1, pos2);
 
             match (pos1, pos2) {
                 (Ok(from), Ok(to)) => {

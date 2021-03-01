@@ -1,1 +1,1 @@
-pub mod chess_agent;
+pub mod cmdline_game;
