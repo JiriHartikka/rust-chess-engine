@@ -226,7 +226,6 @@ impl MoveGenerator {
         }
 
         moves
-        //self.generate_moves_from_target_squares(board, to_move, king, Piece::KING, &target_squares)
     }
 
     fn generate_moves_from_trace_and_piece_positions(
