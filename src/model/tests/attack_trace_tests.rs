@@ -1,5 +1,8 @@
+#[cfg(test)]
 use crate::model::game_state::Position;
+#[cfg(test)]
 use crate::model::attack_trace;
+#[cfg(test)]
 use std::fmt::Debug;
 
 
@@ -85,6 +88,7 @@ fn test_bishop_trace() {
     assert_eq_any_order(&mut expected, trace_from_a2);
 }
 
+#[cfg(test)]
 fn assert_eq_any_order<T: Ord + Debug>(a: &mut Vec<T>, b: &mut Vec<T>) {
     a.sort();
     b.sort();

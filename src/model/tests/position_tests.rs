@@ -1,3 +1,4 @@
+#[cfg(test)]
 use crate::model::game_state::Position;
 
 #[test]

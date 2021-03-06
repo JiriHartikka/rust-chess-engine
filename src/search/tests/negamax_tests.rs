@@ -1,8 +1,10 @@
-use crate::model::game_state::Position;
-
+#[cfg(test)]
 use crate::model::game_state::{GameState};
+#[cfg(test)]
 use crate::model::move_generator::MoveGenerator;
+#[cfg(test)]
 use crate::search::minimax_search::{negamax_alpha_beta, negamax_alpha_beta_with_trasposition_table};
+#[cfg(test)]
 use crate::search::transposition_table::{TranspositionTable};
 
 #[test]

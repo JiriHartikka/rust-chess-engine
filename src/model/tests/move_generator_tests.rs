@@ -1,4 +1,6 @@
+#[cfg(test)]
 use crate::model::{game_state, move_generator};
+#[cfg(test)]
 use crate::model::game_state::{Move, MoveType, CastlingRights, Position, Piece};
 
 #[test]

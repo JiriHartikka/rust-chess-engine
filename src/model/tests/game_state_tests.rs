@@ -1,8 +1,7 @@
+#[cfg(test)]
 use crate::model::game_state;
-use crate::model::game_state::Position;
-use crate::model::game_state::Piece;
-use crate::model::game_state::Color;
-
+#[cfg(test)]
+use crate::model::game_state::{Position, Piece, Color};
 
 #[test]
 fn get_pieces() {

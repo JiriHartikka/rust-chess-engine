@@ -303,7 +303,7 @@ impl ZobristHasher {
         new_hash
     }
 
-    fn unapply_castling_rights(&self, current_hash: u64, castling_rights: CastlingRights, m: Move, to_move: Color) -> u64 {
+    fn unapply_castling_rights(&self, current_hash: u64, castling_rights: CastlingRights, m: Move, _to_move: Color) -> u64 {
         let mut new_hash = current_hash;
         let last_castling_rights = m.last_castling_rights;
 

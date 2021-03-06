@@ -1,4 +1,3 @@
-use std::iter;
 use std::fmt::{Display, Debug, Formatter, Error};
 use std::convert::TryFrom;
 use super::zobrist_hash;
@@ -39,15 +38,6 @@ impl CastlingRights {
             black_queen_side: true,
         }
     }
-
-    /*pub fn none(color: Color) -> CastlingRights {
-        CastlingRights {
-            white_king_side: color == Color::BLACK,
-            white_queen_side: color == Color::BLACK,
-            black_king_side: color == Color::WHITE,
-            black_queen_side: color == Color::WHITE,
-        }
-    }*/
 
     pub fn get_king_side_mut(&mut self, color: Color) -> &mut bool {
         if color == Color::WHITE {

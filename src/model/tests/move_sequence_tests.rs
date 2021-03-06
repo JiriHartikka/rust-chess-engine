@@ -1,6 +1,5 @@
+#[cfg(test)]
 use crate::model::{game_state, move_generator};
-use crate::model::game_state::{Move, MoveType, Position, Piece};
-
 
 #[test]
 fn all_moves_from_starting_position_are_revertible() {
