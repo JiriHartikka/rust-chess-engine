@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 use std::fmt::Display;
 
 
-pub struct UciMove(Position, Position, Option<Piece>);
+pub struct UciMove(pub Position, pub Position, pub Option<Piece>);
 
 impl Display for UciMove {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
