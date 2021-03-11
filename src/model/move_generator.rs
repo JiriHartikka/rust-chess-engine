@@ -143,10 +143,10 @@ impl MoveGenerator {
 
         if to_move == Color::WHITE && board.castling_rights.white_queen_side ||
            to_move == Color::BLACK && board.castling_rights.black_queen_side {
-            let positions = [king, king.delta(-1, 0).unwrap(), king.delta(-2, 0).unwrap()];
+            let positions = [king, king.delta(-1, 0).unwrap(), king.delta(-2, 0).unwrap(), king.delta(-3, 0).unwrap()];
 
             let is_no_threat_for_castling = positions[1..=2].iter().all(|pos| (pos.to_bit_mask() & opponent_threats) == 0); 
-            let is_room_for_castling = positions[1..=2].iter().all(|pos| board.get_piece(*pos).is_none());
+            let is_room_for_castling = positions[1..=3].iter().all(|pos| board.get_piece(*pos).is_none());
             
             if is_no_threat_for_castling && is_room_for_castling {
                 moves.push(
@@ -396,7 +396,7 @@ impl MoveGenerator {
             let file = square.file();
             let rank = square.rank();
             let pawn_mask = board.get_piece_mask(Piece::PAWN, color);
-            let is_promotes_on_move = (rank == 7 && color == Color::WHITE) || (rank == 2 && color == Color::BLACK);
+            let is_promotes_on_move = (rank == 8 && color == Color::WHITE) || (rank == 1 && color == Color::BLACK);
 
             let left_candidate = square.delta(-1, -direction_multiplier);
             if file != 1 && left_candidate.map(|p| pawn_mask & p.to_bit_mask() > 0).unwrap_or(false) {
