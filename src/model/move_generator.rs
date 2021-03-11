@@ -335,16 +335,16 @@ impl MoveGenerator {
             .flat_map(|position| {
                 let rank = position.rank();
                 let is_promotes_on_move = (rank == 7 && color == Color::WHITE) || (rank == 2 && color == Color::BLACK);
-                let move_to = position.delta(0, -1 * direction_multiplier).unwrap();
+                let move_from = position.delta(0, -1 * direction_multiplier).unwrap();
 
                 if is_promotes_on_move {
-                    self.get_pawn_promotions(board, *position, move_to, None)
+                    self.get_pawn_promotions(board, move_from, *position, None)
                 } else {
                     vec![
                         Move { 
                             move_type: MoveType::Step,
                             moving_piece: Piece::PAWN,
-                            from: move_to, 
+                            from: move_from, 
                             to: *position,
                             promotes_to: None,
                             last_en_passant: board.en_passant(),
