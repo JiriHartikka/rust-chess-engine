@@ -334,7 +334,7 @@ impl MoveGenerator {
             .iter()
             .flat_map(|position| {
                 let rank = position.rank();
-                let is_promotes_on_move = (rank == 7 && color == Color::WHITE) || (rank == 2 && color == Color::BLACK);
+                let is_promotes_on_move = (rank == 8 && color == Color::WHITE) || (rank == 1 && color == Color::BLACK);
                 let move_from = position.delta(0, -1 * direction_multiplier).unwrap();
 
                 if is_promotes_on_move {
