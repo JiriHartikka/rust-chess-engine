@@ -24,7 +24,7 @@ fn negamax_alpha_beta_helper(game_state: &mut GameState, move_generator: &MoveGe
     let next_moves = move_generator.generate_moves(game_state);
 
     if next_moves.is_checkmate() {
-        return (None, color_multiplier * EVAL_MAX, 1);
+        return (None, -color_multiplier * EVAL_MAX, 1);
     }
 
     if next_moves.moves.is_empty() {
@@ -101,7 +101,7 @@ fn negamax_alpha_beta_with_trasposition_table_helper(game_state: &mut GameState,
     let next_moves = move_generator.generate_moves(game_state);
 
     if next_moves.is_checkmate() {
-        return (None, color_multiplier * EVAL_MAX, 1);
+        return (None, -color_multiplier * EVAL_MAX, 1);
     }
 
     if next_moves.moves.is_empty() {
