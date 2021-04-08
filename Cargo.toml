@@ -3,6 +3,7 @@ name = "rust-chess"
 version = "0.1.0"
 authors = ["Jiri Hartikka <jiri.hartikka@gmail.com>"]
 edition = "2018"
+rust = "1.51.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
