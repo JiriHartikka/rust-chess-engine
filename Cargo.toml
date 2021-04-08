@@ -10,3 +10,16 @@ rust = "1.51.0"
 [dependencies]
 lazy_static = "1.4.0"
 rand = "0.8.1"
+
+[dev-dependencies]
+bencher = "0.1.5"
+
+[[bench]]
+path = "src/benches/search_bench.rs"
+name = "search_bench"
+harness = false
+
+[[bench]]
+path = "src/benches/move_generator_bench.rs"
+name = "move_generator"
+harness = false

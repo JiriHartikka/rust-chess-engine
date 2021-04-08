@@ -10,7 +10,7 @@ use crate::search::transposition_table::TranspositionTable;
 use crate::uci::uci_utils::parse_move;
 
 #[cfg(test)]
-use crate::search::tests::utils;
+use crate::search::test_utils;
 
 
 #[test]
@@ -48,11 +48,9 @@ fn avoid_checkmate_in_one() {
 
     let mut transposition_table = TranspositionTable::with_capacity(10_000);
 
-    utils::apply_position(move_sequence, &mut game_state, &move_generator);
+    test_utils::apply_position(move_sequence, &mut game_state, &move_generator);
 
     let (best_move, _, _) = negamax_alpha_beta_with_trasposition_table(&mut game_state, &move_generator, &mut transposition_table, 3); 
-
-    println!("{:?}", best_move);
 
     game_state.apply_move_mut(best_move.unwrap());
 

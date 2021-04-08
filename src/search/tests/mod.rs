@@ -1,3 +1,3 @@
 mod negamax_tests;
-mod utils;
+pub mod utils;
 mod checkmate_tests;
