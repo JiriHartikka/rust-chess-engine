@@ -64,61 +64,62 @@ impl MoveGenerator {
     // TODO: test performance with smallvec: https://github.com/servo/rust-smallvec
     pub fn generate_moves_unchecked(&self, board: &GameState) -> Vec<Move> {
         let mut moves = vec![];
-        moves.append(&mut self.generate_queen_moves(board, board.to_move()));
-        moves.append(&mut self.generate_rook_moves(board, board.to_move()));
-        moves.append(&mut self.generate_bishop_moves(board, board.to_move()));
-        moves.append(&mut self.generate_knight_moves(board, board.to_move()));
-        moves.append(&mut self.generate_pawn_moves(board, board.to_move()));
-        moves.append(&mut self.generate_king_moves(board, board.to_move()));
-        moves.append(&mut self.generate_castling_moves(board, board.to_move()));
+        self.generate_queen_moves(board, board.to_move(), &mut moves);
+        self.generate_rook_moves(board, board.to_move(), &mut moves);
+        self.generate_bishop_moves(board, board.to_move(), &mut moves);
+        self.generate_knight_moves(board, board.to_move(), &mut moves);
+        self.generate_pawn_moves(board, board.to_move(), &mut moves);
+        self.generate_king_moves(board, board.to_move(), &mut moves);
+        self.generate_castling_moves(board, board.to_move(), &mut moves);
 
         moves
     }
 
     fn generate_threats(&self, board: &GameState, color: Color) -> u64 {
         let mut moves = vec![];
-        moves.append(&mut self.generate_queen_moves(board, color));
-        moves.append(&mut self.generate_rook_moves(board, color));
-        moves.append(&mut self.generate_bishop_moves(board, color));
-        moves.append(&mut self.generate_knight_moves(board, color));
-        moves.append(&mut self.generate_pawn_captures(board, color));
-        moves.append(&mut self.generate_king_moves(board, color));
+        self.generate_queen_moves(board, color, &mut moves);
+        self.generate_rook_moves(board, color, &mut moves);
+        self.generate_bishop_moves(board, color, &mut moves);
+        self.generate_knight_moves(board, color, &mut moves);
+        self.generate_pawn_captures(board, color, &mut moves);
+        self.generate_king_moves(board, color, &mut moves);
 
         moves.into_iter().fold(0, |mask, m| mask | m.to.to_bit_mask())
     }
 
-    pub fn generate_rook_moves(&self, board: &GameState, to_move: Color) -> Vec<Move> {
+    pub fn generate_rook_moves(&self, board: &GameState, to_move: Color, target: &mut Vec<Move>) {
         self.generate_moves_from_trace_and_piece_positions(
             board,
             to_move,
             board.get_piece_position(Piece::ROOK, to_move),
             Piece::ROOK,
-            &self.rook_trace)
+            &self.rook_trace,
+            target)
     }
 
-    pub fn generate_bishop_moves(&self, board: &GameState, to_move: Color) -> Vec<Move> {
+    pub fn generate_bishop_moves(&self, board: &GameState, to_move: Color, target: &mut Vec<Move>) {
         self.generate_moves_from_trace_and_piece_positions(
             board,
             to_move,
             board.get_piece_position(Piece::BISHOP, to_move),
             Piece::BISHOP,
-            &self.bishop_trace)
+            &self.bishop_trace,
+            target)
     }
 
-    pub fn generate_knight_moves(&self, board: &GameState, to_move: Color) -> Vec<Move> {
+    pub fn generate_knight_moves(&self, board: &GameState, to_move: Color, target: &mut Vec<Move>) {
         self.generate_moves_from_trace_and_piece_positions(
             board,
             to_move,
             board.get_piece_position(Piece::KNIGHT, to_move),
             Piece::KNIGHT,
-            &self.knight_trace)
+            &self.knight_trace,
+            target)
     }
 
-    pub fn generate_castling_moves(&self, board: &GameState, to_move: Color) -> Vec<Move> {
+    pub fn generate_castling_moves(&self, board: &GameState, to_move: Color, target: &mut Vec<Move>) {
         let opponent_threats = self.generate_threats(board, to_move.opposite());
         let king = board.get_piece_position(Piece::KING, to_move)[0];
-
-        let mut moves = vec![];
 
         if to_move == Color::WHITE && board.castling_rights.white_king_side ||
            to_move == Color::BLACK && board.castling_rights.black_king_side {
@@ -128,7 +129,7 @@ impl MoveGenerator {
             let is_room_for_castling = positions[1..=2].iter().all(|pos| board.get_piece(*pos).is_none());
 
             if is_no_threat_for_castling && is_room_for_castling {
-                moves.push(
+                target.push(
                     Move { 
                         move_type: MoveType::Castling,
                         moving_piece: Piece::KING,
@@ -149,7 +150,7 @@ impl MoveGenerator {
             let is_room_for_castling = positions[1..=3].iter().all(|pos| board.get_piece(*pos).is_none());
             
             if is_no_threat_for_castling && is_room_for_castling {
-                moves.push(
+                target.push(
                     Move { 
                         move_type: MoveType::Castling,
                         moving_piece: Piece::KING,
@@ -161,29 +162,25 @@ impl MoveGenerator {
                 });
             }
         }
-
-        moves
     }
 
-    pub fn generate_queen_moves(&self, board: &GameState, to_move: Color) -> Vec<Move> {
+    pub fn generate_queen_moves(&self, board: &GameState, to_move: Color, target: &mut Vec<Move>) {
         self.generate_moves_from_trace_and_piece_positions(
             board,
             to_move,
             board.get_piece_position(Piece::QUEEN, to_move),
             Piece::QUEEN,
-            &self.queen_trace)
+            &self.queen_trace,
+            target)
     }
 
-    pub fn generate_pawn_moves(&self, board: &GameState, to_move: Color) -> Vec<Move> {
-        let mut moves = vec![];
-        moves.append(&mut self.generate_pawn_steps(board, to_move));
-        moves.append(&mut self.generate_pawn_captures(board, to_move));
-        moves.append(&mut self.generate_en_passant_captures(board));
-        moves
+    pub fn generate_pawn_moves(&self, board: &GameState, to_move: Color, target: &mut Vec<Move>) {
+        self.generate_pawn_steps(board, to_move, target);
+        self.generate_pawn_captures(board, to_move, target);
+        self.generate_en_passant_captures(board, target);
     }
 
-    pub fn generate_king_moves(&self, board: &GameState, to_move: Color) -> Vec<Move> {
-        let mut moves = vec![];
+    pub fn generate_king_moves(&self, board: &GameState, to_move: Color, target: &mut Vec<Move>) {
         let king = board.get_piece_position(Piece::KING, to_move)[0];
         let target_squares = vec![
             king.delta(0, 1),
@@ -198,7 +195,7 @@ impl MoveGenerator {
 
         for square in target_squares {
             match board.collide(square) {
-                None => moves.push(
+                None => target.push(
                     Move {
                         move_type: MoveType::Step,
                         moving_piece: Piece::KING, 
@@ -209,7 +206,7 @@ impl MoveGenerator {
                         last_castling_rights: board.castling_rights, 
                     }),
                 Some(color) if color == to_move.opposite() => { 
-                    moves.push(
+                    target.push(
                         Move { 
                             move_type: MoveType::Capture(board.get_piece(square).unwrap().0),
                             moving_piece: Piece::KING,
@@ -225,7 +222,6 @@ impl MoveGenerator {
             }
         }
 
-        moves
     }
 
     fn generate_moves_from_trace_and_piece_positions(
@@ -233,14 +229,12 @@ impl MoveGenerator {
         to_move: Color, 
         piece_positions: Vec<Position>, 
         piece: Piece,
-        trace: &Vec<Vec<Vec<Position>>>) -> Vec<Move> {
+        trace: &Vec<Vec<Vec<Position>>>,
+        target: &mut Vec<Move>) {
 
-        let mut moves = vec![];
         for piece_position in piece_positions {
-            let mut moves_from_position = self.generate_moves_from_trace_and_position(board, to_move, piece_position, piece, trace);
-            moves.append(&mut moves_from_position);
+            self.generate_moves_from_trace_and_position(board, to_move, piece_position, piece, trace, target);
         }
-        moves
     }
 
     fn generate_moves_from_target_squares(
@@ -249,14 +243,14 @@ impl MoveGenerator {
         to_move: Color,
         position: Position,
         piece: Piece,
-        target_squares: &Vec<Position>) -> Vec<Move> {
+        target_squares: &Vec<Position>,
+        target: &mut Vec<Move>) {
 
         let opposite_color = to_move.opposite();
-        let mut moves = vec![];
 
         for square in target_squares {
             match board.collide(*square) {
-                None => moves.push(
+                None => target.push(
                     Move {
                         move_type: MoveType::Step,
                         moving_piece: piece, 
@@ -267,7 +261,7 @@ impl MoveGenerator {
                         last_castling_rights: board.castling_rights, 
                     }),
                 Some(color) if color == opposite_color => { 
-                    moves.push(
+                    target.push(
                         Move { 
                             move_type: MoveType::Capture(board.get_piece(*square).unwrap().0),
                             moving_piece: piece,
@@ -283,8 +277,6 @@ impl MoveGenerator {
                 _ => panic!("Not possible"),
             }
         }
-
-        moves
     }
 
     fn generate_moves_from_trace_and_position(
@@ -293,18 +285,15 @@ impl MoveGenerator {
         to_move: Color,
         position: Position,
         piece: Piece,
-        trace: &Vec<Vec<Vec<Position>>>) -> Vec<Move> {
-
-        let mut moves = vec![];
+        trace: &Vec<Vec<Vec<Position>>>,
+        target: &mut Vec<Move>) {
 
         for ray in &trace[usize::from(position.to_numeric())] {
-            moves.append(&mut self.generate_moves_from_target_squares(board, to_move, position, piece, ray));
+            self.generate_moves_from_target_squares(board, to_move, position, piece, ray, target);
         }
-
-        moves
     }
 
-    fn generate_pawn_steps(&self, board: &GameState, color: Color) -> Vec<Move> {
+    fn generate_pawn_steps(&self, board: &GameState, color: Color, target: &mut Vec<Move>) {
         let current_pawns = board.get_piece_mask(Piece::PAWN, color);
 
         fn take_step(pawns: u64, color: Color) -> u64 {
@@ -328,55 +317,42 @@ impl MoveGenerator {
         let valid_second_step_moves = pawns_second_step & !board.collide_mask(pawns_second_step); 
         let direction_multiplier = if color == Color::WHITE { 1 } else { -1 };
 
-        let mut moves = vec![];
+        for position in bit_mask_to_positions(valid_one_step_moves) {
+            let rank = position.rank();
+            let is_promotes_on_move = (rank == 8 && color == Color::WHITE) || (rank == 1 && color == Color::BLACK);
+            let move_from = position.delta(0, -1 * direction_multiplier).unwrap();
 
-        let mut one_step_moves = bit_mask_to_positions(valid_one_step_moves)
-            .iter()
-            .flat_map(|position| {
-                let rank = position.rank();
-                let is_promotes_on_move = (rank == 8 && color == Color::WHITE) || (rank == 1 && color == Color::BLACK);
-                let move_from = position.delta(0, -1 * direction_multiplier).unwrap();
+            if is_promotes_on_move {
+                self.get_pawn_promotions(board, move_from, position, None, target)
+            } else {
+                target.push(
+                    Move { 
+                        move_type: MoveType::Step,
+                        moving_piece: Piece::PAWN,
+                        from: move_from, 
+                        to: position,
+                        promotes_to: None,
+                        last_en_passant: board.en_passant(),
+                        last_castling_rights: board.castling_rights,
+                    })
+            }
+        }
 
-                if is_promotes_on_move {
-                    self.get_pawn_promotions(board, move_from, *position, None)
-                } else {
-                    vec![
-                        Move { 
-                            move_type: MoveType::Step,
-                            moving_piece: Piece::PAWN,
-                            from: move_from, 
-                            to: *position,
-                            promotes_to: None,
-                            last_en_passant: board.en_passant(),
-                            last_castling_rights: board.castling_rights,
-                        }
-                    ]
-                }
-            })
-            .collect();
-
-        let mut two_step_moves = bit_mask_to_positions(valid_second_step_moves)
-            .iter()
-            .map(|position| 
-                Move { 
-                    move_type: MoveType::Step,
-                    moving_piece: Piece::PAWN,
-                    from: position.delta(0, -2 * direction_multiplier).unwrap(),
-                    to: *position,
-                    promotes_to: None,
-                    last_en_passant: board.en_passant(),
-                    last_castling_rights: board.castling_rights,
-                })
-            .collect();
-        
-        moves.append(&mut one_step_moves);
-        moves.append(&mut two_step_moves);
-
-        moves
+        for position in bit_mask_to_positions(valid_second_step_moves) {
+            target.push(Move { 
+                move_type: MoveType::Step,
+                moving_piece: Piece::PAWN,
+                from: position.delta(0, -2 * direction_multiplier).unwrap(),
+                to: position,
+                promotes_to: None,
+                last_en_passant: board.en_passant(),
+                last_castling_rights: board.castling_rights,
+            });
+        }
     }
 
     // does not include en passant captures
-    fn generate_pawn_captures(&self, board: &GameState, color: Color) -> Vec<Move> {
+    fn generate_pawn_captures(&self, board: &GameState, color: Color, target: &mut Vec<Move>) {
         let current_pawns = board.get_piece_mask(Piece::PAWN, color);
 
         // calculate squares where pawns may attack
@@ -389,7 +365,7 @@ impl MoveGenerator {
 
         let valid_captures = board.collide_mask_color(attack_mask, color.opposite());
 
-        let mut moves = vec![];
+        //let mut moves = vec![];
         let direction_multiplier = if color == Color::WHITE { 1 } else { -1 };
 
         for square in bit_mask_to_positions(valid_captures) {
@@ -403,9 +379,9 @@ impl MoveGenerator {
                 let captured_piece = board.get_piece(square).unwrap().0;
 
                 if is_promotes_on_move {
-                    moves.append(&mut self.get_pawn_promotions(board, left_candidate.unwrap(), square, Some(captured_piece)));
+                    self.get_pawn_promotions(board, left_candidate.unwrap(), square, Some(captured_piece), target);
                 } else {
-                    moves.push(
+                    target.push(
                         Move { 
                             move_type: MoveType::Capture(captured_piece),
                             moving_piece: Piece::PAWN,
@@ -424,9 +400,9 @@ impl MoveGenerator {
                 let captured_piece = board.get_piece(square).unwrap().0;
                 
                 if is_promotes_on_move {
-                    moves.append(&mut self.get_pawn_promotions(board, right_candidate.unwrap(), square, Some(captured_piece)));
+                    self.get_pawn_promotions(board, right_candidate.unwrap(), square, Some(captured_piece), target);
                 } else {
-                    moves.push(
+                    target.push(
                         Move { 
                             move_type: MoveType::Capture(captured_piece),
                             moving_piece: Piece::PAWN,
@@ -441,15 +417,13 @@ impl MoveGenerator {
             }
         }
 
-        moves
      }
 
-     fn get_pawn_promotions(&self, board: &GameState, from: Position, to: Position, capture: Option<Piece>) -> Vec<Move> {
-        let mut promotions = vec![];
+     fn get_pawn_promotions(&self, board: &GameState, from: Position, to: Position, capture: Option<Piece>, target: &mut Vec<Move>) {
         let pieces = [Piece::QUEEN, Piece::ROOK, Piece::BISHOP, Piece::KNIGHT];
         
         for piece in pieces.iter() {
-            promotions.push(
+            target.push(
                 Move { 
                     move_type: capture.map(|p| MoveType::Capture(p)).unwrap_or(MoveType::Step),
                     moving_piece: Piece::PAWN,
@@ -461,14 +435,13 @@ impl MoveGenerator {
                 }
             );
         }
-        promotions
      }
 
-     fn generate_en_passant_captures(&self, board: &GameState) -> Vec<Move> {
+     fn generate_en_passant_captures(&self, board: &GameState, target: &mut Vec<Move>) {
         let current_pawns = board.get_piece_mask(Piece::PAWN, board.to_move());
         let direction_multiplier = if board.to_move() == Color::WHITE { 1 } else { -1 };
 
-        let mut moves = vec![];
+        //let mut moves = vec![];
 
         if let Some(en_passant_square) = board.en_passant() {
             let is_left_en_passant_valid = ((current_pawns & (!MASK_FILE8)) << 1) & (en_passant_square.to_bit_mask()) > 0;
@@ -484,7 +457,7 @@ impl MoveGenerator {
                     last_en_passant: board.en_passant(),
                     last_castling_rights: board.castling_rights,
                 };
-                moves.push(en_passant);
+                target.push(en_passant);
             }
 
             if is_right_en_passant_valid {
@@ -497,11 +470,10 @@ impl MoveGenerator {
                     last_en_passant: board.en_passant(),
                     last_castling_rights: board.castling_rights,
                 };
-                moves.push(en_passant);
+                target.push(en_passant);
             }
         }
 
-        moves
      }
  
 }
