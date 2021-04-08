@@ -194,7 +194,7 @@ impl MoveGenerator {
             king.delta(-1, -1),
             king.delta(-1, 1),
             king.delta(1, -1),
-        ].into_iter().filter_map(|x| x).collect::<Vec<Position>>();
+        ].into_iter().filter_map(|x| x);
 
         for square in target_squares {
             match board.collide(square) {
