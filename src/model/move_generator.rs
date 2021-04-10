@@ -440,8 +440,6 @@ impl MoveGenerator {
         let current_pawns = board.get_piece_mask(Piece::PAWN, board.to_move());
         let direction_multiplier = if board.to_move() == Color::WHITE { 1 } else { -1 };
 
-        //let mut moves = vec![];
-
         if let Some(en_passant_square) = board.en_passant() {
             let is_left_en_passant_valid = ((current_pawns & (!MASK_FILE8)) << 1) & (en_passant_square.to_bit_mask()) > 0;
             let is_right_en_passant_valid = ((current_pawns & (!MASK_FILE1)) >> 1) & (en_passant_square.to_bit_mask()) > 0;                
