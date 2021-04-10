@@ -365,7 +365,6 @@ impl MoveGenerator {
 
         let valid_captures = board.collide_mask_color(attack_mask, color.opposite());
 
-        //let mut moves = vec![];
         let direction_multiplier = if color == Color::WHITE { 1 } else { -1 };
 
         for square in bit_mask_to_positions(valid_captures) {
