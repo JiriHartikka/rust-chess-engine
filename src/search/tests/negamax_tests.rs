@@ -3,11 +3,14 @@ use crate::model::game_state::{GameState};
 #[cfg(test)]
 use crate::model::move_generator::MoveGenerator;
 #[cfg(test)]
-use crate::search::minimax_search::{negamax_alpha_beta, negamax_alpha_beta_with_trasposition_table};
+use crate::search::minimax_search::{negamax_alpha_beta, negamax_alpha_beta_with_trasposition_table, iterative_alpha_beta};
 #[cfg(test)]
 use crate::search::transposition_table::{TranspositionTable};
 #[cfg(test)]
 use crate::uci::uci_utils;
+
+#[cfg(test)]
+use std::time::Duration;
 
 
 #[test]
@@ -94,6 +97,23 @@ fn negamax_finds_fools_mate() {
     assert_eq!("d8h4", uci_utils::move_to_uci(&first_move.unwrap()).to_string());
     assert!(first_eval > 1000000);
 }
+
+#[test]
+fn iterative_deepening_finds_fools_mate() {
+    let move_generator = MoveGenerator::new();
+    let mut state = GameState::new();
+    let transposition_table = &mut TranspositionTable::with_capacity(10_000);
+
+    apply_move("f2f3", &move_generator, &mut state);
+    apply_move("e7e6", &move_generator, &mut state);
+    apply_move("g2g4", &move_generator, &mut state);
+
+    let (first_move, first_eval, _) = iterative_alpha_beta(&mut state, &move_generator, transposition_table, Duration::from_millis(50));
+
+    assert_eq!("d8h4", uci_utils::move_to_uci(&first_move.unwrap()).to_string());
+    assert!(first_eval > 1000000);
+}
+
 
 #[cfg(test)]
 fn apply_move(to_apply: &str, move_generator: &MoveGenerator, game_state: &mut GameState) {
