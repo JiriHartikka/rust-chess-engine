@@ -106,11 +106,11 @@ fn negamax_alpha_beta_with_trasposition_table_helper(game_state: &mut GameState,
     let next_moves = move_generator.generate_moves(game_state);
 
     if next_moves.is_checkmate() {
-        return (None, -color_multiplier * EVAL_MAX, 1);
+        return (None, -color_multiplier * (EVAL_MAX - 10_000 * i32::from(starting_depth - depth)), 1);
     }
 
     if next_moves.moves.is_empty() {
-        return (None, color_multiplier * evaluator::evaluate(&game_state), 1);
+        return (None, 0, 1);
     }
 
     // could order moves here ...
@@ -213,11 +213,11 @@ fn negamax_alpha_beta_with_trasposition_table_and_principal_variation_helper(
     let mut next_moves = move_generator.generate_moves(game_state);
 
     if next_moves.is_checkmate() {
-        return (None, -color_multiplier * EVAL_MAX, 1);
+        return (None, -color_multiplier * (EVAL_MAX - 10_000 * i32::from(starting_depth - depth)), 1);
     }
 
     if next_moves.moves.is_empty() {
-        return (None, color_multiplier * evaluator::evaluate(&game_state), 1);
+        return (None, 0, 1);
     }
 
     //order moves, taking the principal variation first if available
