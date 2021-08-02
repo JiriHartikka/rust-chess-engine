@@ -1,7 +1,9 @@
 #[cfg(test)]
-use crate::model::{game_state, move_generator};
+use crate::model::move_generator::{MoveGenerator};
 #[cfg(test)]
-use crate::model::game_state::{Move, MoveType, CastlingRights, Position, Piece};
+use crate::model::game_state::{GameState, Move, MoveType, CastlingRights, Position, Piece};
+#[cfg(test)]
+use crate::search::test_utils;
 
 #[test]
 fn test_moves_for_scandinavian_opening_sequence() {
@@ -44,8 +46,8 @@ fn test_moves_for_scandinavian_opening_sequence() {
         last_castling_rights: CastlingRights::initial(),
     };
 
-    let mut game_state = game_state::GameState::new();
-    let move_generator = move_generator::MoveGenerator::new();
+    let mut game_state = GameState::new();
+    let move_generator = MoveGenerator::new();
     let mut valid_moves = move_generator.generate_moves(&game_state);
 
     assert!(valid_moves.moves.contains(&e4));
@@ -122,8 +124,8 @@ fn test_opening_sequence_with_en_passant() {
     };
     
 
-    let mut game_state = game_state::GameState::new();
-    let move_generator = move_generator::MoveGenerator::new();
+    let mut game_state = GameState::new();
+    let move_generator = MoveGenerator::new();
     let mut valid_moves = move_generator.generate_moves(&game_state);
 
     assert!(valid_moves.moves.contains(&e4));
@@ -151,8 +153,8 @@ fn test_opening_sequence_with_en_passant() {
 
 #[test]
 fn test_castling_move_generation() {
-    let mut game_state = game_state::GameState::new();
-    let move_generator = move_generator::MoveGenerator::new();
+    let mut game_state = GameState::new();
+    let move_generator = MoveGenerator::new();
     
     game_state.apply_move_mut(move_generator.get_move(&game_state, Position::new(7, 1), Position::new(6, 3)).unwrap());
     game_state.apply_move_mut(move_generator.get_move(&game_state, Position::new(7, 8), Position::new(6, 6)).unwrap());
@@ -177,4 +179,43 @@ fn test_castling_move_generation() {
     let black_castling_king_side = move_generator.generate_moves(&game_state).moves.into_iter().find(|m| matches!(m.move_type, MoveType::Castling)).unwrap();
     assert_eq!(Position::new(7, 8), black_castling_king_side.to);
     assert_eq!(Position::new(5, 8), black_castling_king_side.from);
+}
+
+#[test]
+fn test_checkmate_detection_white() {
+    let move_sequence: Vec<String> = [
+        "e2e3", "f7f6",
+        "a2a3", "g7g5",
+        "d1h5",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+
+    let mut game_state = GameState::new();
+    let move_generator = MoveGenerator::new();
+
+    test_utils::apply_position(move_sequence, &mut game_state, &move_generator);
+
+    let generated_moves = move_generator.generate_moves(&game_state);
+    assert!(generated_moves.is_checkmate());
+}
+
+#[test]
+fn test_checkmate_detection_black() {
+    let move_sequence: Vec<String> = [
+        "f2f3", "e7e6",
+        "g2g4", "d8h4"
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+
+    let mut game_state = GameState::new();
+    let move_generator = MoveGenerator::new();
+
+    test_utils::apply_position(move_sequence, &mut game_state, &move_generator);
+
+    let generated_moves = move_generator.generate_moves(&game_state);
+    assert!(generated_moves.is_checkmate());
 }

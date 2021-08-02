@@ -30,7 +30,7 @@ fn negamax_alpha_beta_helper(game_state: &mut GameState, move_generator: &MoveGe
     let next_moves = move_generator.generate_moves(game_state);
 
     if next_moves.is_checkmate() {
-        return (None, -color_multiplier * EVAL_MAX, 1);
+        return (None, -EVAL_MAX, 1);
     }
 
     if next_moves.moves.is_empty() {
@@ -106,7 +106,7 @@ fn negamax_alpha_beta_with_trasposition_table_helper(game_state: &mut GameState,
     let next_moves = move_generator.generate_moves(game_state);
 
     if next_moves.is_checkmate() {
-        return (None, -color_multiplier * (EVAL_MAX - 10_000 * i32::from(starting_depth - depth)), 1);
+        return (None, -(EVAL_MAX - 10_000 * i32::from(starting_depth - depth)), 1);
     }
 
     if next_moves.moves.is_empty() {
@@ -213,7 +213,7 @@ fn negamax_alpha_beta_with_trasposition_table_and_principal_variation_helper(
     let mut next_moves = move_generator.generate_moves(game_state);
 
     if next_moves.is_checkmate() {
-        return (None, -color_multiplier * (EVAL_MAX - 10_000 * i32::from(starting_depth - depth)), 1);
+        return (None, -(EVAL_MAX - 10_000 * i32::from(starting_depth - depth)), 1);
     }
 
     if next_moves.moves.is_empty() {

@@ -330,12 +330,12 @@ impl GameState {
                 let old_rook_position = Position::new(old_rook_file, rank);
                 let new_rook_position = Position::new(new_rook_file, rank);
                 let rook_piece_mask = self.get_piece_mask_mut(Piece::ROOK, self.to_move());
-                *rook_piece_mask = *rook_piece_mask ^ old_rook_position.to_bit_mask();
-                *rook_piece_mask = *rook_piece_mask ^ new_rook_position.to_bit_mask();
+                *rook_piece_mask ^= old_rook_position.to_bit_mask();
+                *rook_piece_mask ^=  new_rook_position.to_bit_mask();
                 *self.castling_rights.get_king_side_mut(self.to_move) = false;
                 *self.castling_rights.get_queen_side_mut(self.to_move) = false;
             },
-            _ => (),
+            MoveType::Step => (),
         }
 
         let mut moving_piece_zor = to_apply.from.to_bit_mask();
@@ -408,7 +408,7 @@ impl GameState {
                 *rook_piece_mask = *rook_piece_mask ^ old_rook_position.to_bit_mask();
                 *rook_piece_mask = *rook_piece_mask ^ new_rook_position.to_bit_mask();
             },
-            _ => (),
+            MoveType::Step => (),
         }
 
         let mut moving_piece_zor = to_unapply.from.to_bit_mask();

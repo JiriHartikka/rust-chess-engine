@@ -1,5 +1,5 @@
 #[cfg(test)]
-use crate::model::game_state::GameState;
+use crate::model::game_state::{GameState, Position};
 #[cfg(test)]
 use crate::model::move_generator::MoveGenerator;
 #[cfg(test)]
@@ -69,4 +69,47 @@ fn avoid_checkmate_in_one() {
         }
     };
 
+}
+
+
+#[test]
+fn find_fools_mate_white() {
+    let move_sequence: Vec<String> = [
+        "e2e3", "f7f6",
+        "a2a3", "g7g5",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+
+    let mut game_state = GameState::new();
+    let move_generator = MoveGenerator::new();
+    let mut transposition_table = TranspositionTable::with_capacity(10_000);
+
+    test_utils::apply_position(move_sequence, &mut game_state, &move_generator);
+
+    let (best_move, _, _) = negamax_alpha_beta_with_trasposition_table(&mut game_state, &move_generator, &mut transposition_table, 3); 
+
+    assert_eq!(best_move.unwrap().to, Position::new(8, 5)); 
+}
+
+#[test]
+fn find_fools_mate_black() {
+    let move_sequence: Vec<String> = [
+        "f2f3", "e7e6",
+        "g2g4",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+
+    let mut game_state = GameState::new();
+    let move_generator = MoveGenerator::new();
+    let mut transposition_table = TranspositionTable::with_capacity(10_000);
+
+    test_utils::apply_position(move_sequence, &mut game_state, &move_generator);
+
+    let (best_move, _, _) = negamax_alpha_beta_with_trasposition_table(&mut game_state, &move_generator, &mut transposition_table, 3); 
+
+    assert_eq!(best_move.unwrap().to, Position::new(8, 4)); 
 }
