@@ -15,12 +15,15 @@ use crate::search::transposition_table::{TranspositionTable, MatchType};
 const EVAL_MAX: i32 = i32::MAX;
 const EVAL_MIN: i32 = -EVAL_MAX;
 
+type Evaluation = i32;
+type SearchCount = u64;
+type SearchResult = (Option<Move>, Evaluation, SearchCount);
 
-pub fn negamax_alpha_beta(game_state: &mut GameState, move_generator: &MoveGenerator, depth: u16) -> (Option<Move>, i32, u64) {
+pub fn negamax_alpha_beta(game_state: &mut GameState, move_generator: &MoveGenerator, depth: u16) -> SearchResult {
     negamax_alpha_beta_helper(game_state, move_generator, EVAL_MIN, EVAL_MAX, depth)
 }
 
-fn negamax_alpha_beta_helper(game_state: &mut GameState, move_generator: &MoveGenerator, alpha: i32, beta: i32, depth: u16) -> (Option<Move>, i32, u64) {
+fn negamax_alpha_beta_helper(game_state: &mut GameState, move_generator: &MoveGenerator, alpha: i32, beta: i32, depth: u16) -> SearchResult {
     let color_multiplier = if game_state.to_move() == Color::WHITE { 1 } else { -1 };
 
     if depth == 0 {
@@ -70,7 +73,7 @@ pub fn negamax_alpha_beta_with_trasposition_table(game_state: &mut GameState, mo
     negamax_alpha_beta_with_trasposition_table_helper(game_state, move_generator, table, EVAL_MIN, EVAL_MAX, depth, depth)
 }
 
-fn negamax_alpha_beta_with_trasposition_table_helper(game_state: &mut GameState, move_generator: &MoveGenerator, table: &mut TranspositionTable, alpha: i32, beta: i32, depth: u16, starting_depth: u16) -> (Option<Move>, i32, u64) {
+fn negamax_alpha_beta_with_trasposition_table_helper(game_state: &mut GameState, move_generator: &MoveGenerator, table: &mut TranspositionTable, alpha: i32, beta: i32, depth: u16, starting_depth: u16) -> SearchResult {
     let color_multiplier = if game_state.to_move() == Color::WHITE { 1 } else { -1 };
 
     let mut current_alpha = alpha;
