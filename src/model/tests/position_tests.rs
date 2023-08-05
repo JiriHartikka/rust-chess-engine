@@ -13,7 +13,7 @@ fn to_bit_mask() {
     assert_eq!(1 << 8, a2_bit_mask);
 
     let d5_bit_mask = Position::new(4, 5).to_bit_mask();
-    assert_eq!(1 << (4 * 8  + 3), d5_bit_mask);
+    assert_eq!(1 << (4 * 8 + 3), d5_bit_mask);
 
     let h8_bit_mask = Position::new(8, 8).to_bit_mask();
     assert_eq!(1 << 63, h8_bit_mask);
@@ -23,7 +23,7 @@ fn to_bit_mask() {
 fn numeric_position() {
     let a1 = Position::new(1, 1);
     assert_eq!(0, a1.to_numeric());
-    
+
     let h1 = Position::new(8, 1);
     assert_eq!(7, h1.to_numeric());
 
@@ -38,7 +38,7 @@ fn numeric_position() {
 fn display() {
     let a1 = Position::new(1, 1);
     assert_eq!("A1", format!("{}", a1));
-    
+
     let h1 = Position::new(8, 1);
     assert_eq!("H1", format!("{}", h1));
 
@@ -53,7 +53,7 @@ fn display() {
 fn file() {
     let a1 = Position::new(1, 1);
     assert_eq!(1, a1.file());
-    
+
     let h1 = Position::new(8, 1);
     assert_eq!(8, h1.file());
 
@@ -68,7 +68,7 @@ fn file() {
 fn rank() {
     let a1 = Position::new(1, 1);
     assert_eq!(1, a1.rank());
-    
+
     let h1 = Position::new(8, 1);
     assert_eq!(1, h1.rank());
 

@@ -17,5 +17,4 @@ fn all_moves_from_starting_position_are_revertible() {
         initial_state_clone.unapply_move_mut(next_move);
         assert_eq!(initial_state, initial_state_clone);
     }
-
 }

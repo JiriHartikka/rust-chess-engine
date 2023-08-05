@@ -12,32 +12,13 @@ use crate::uci::uci_utils::parse_move;
 #[cfg(test)]
 use crate::search::test_utils;
 
-
 #[test]
 fn avoid_checkmate_in_one() {
     let move_sequence: Vec<String> = [
-        "e2e4", "c7c5",
-        "d1h5", "e7e6", 
-        "g1f3", "g8f6", 
-        "h5e5", "b8c6",
-        "e5f4", "d7d5",
-        "e4e5", "f6h5",
-        "f4g4", "g7g6",
-        "f1b5", "f8g7",
-        "e1g1", "e8g8",
-        "b5c6", "b7c6",
-        "d2d3", "d8c7",
-        "g4g5", "h7h6",
-        "g5g4", "g7e5",
-        "f3e5", "c7e5",
-        "c1h6", "f8e8",
-        "b1c3", "e5d6",
-        "g4h4", "f7f5",
-        "b2b4", "c5b4",
-        "c3e2", "c8b7",
-        "a1e1", "c6c5", 
-        "c2c3", "d5d4",
-        "c3b4", "d6d5"
+        "e2e4", "c7c5", "d1h5", "e7e6", "g1f3", "g8f6", "h5e5", "b8c6", "e5f4", "d7d5", "e4e5",
+        "f6h5", "f4g4", "g7g6", "f1b5", "f8g7", "e1g1", "e8g8", "b5c6", "b7c6", "d2d3", "d8c7",
+        "g4g5", "h7h6", "g5g4", "g7e5", "f3e5", "c7e5", "c1h6", "f8e8", "b1c3", "e5d6", "g4h4",
+        "f7f5", "b2b4", "c5b4", "c3e2", "c8b7", "a1e1", "c6c5", "c2c3", "d5d4", "c3b4", "d6d5",
     ]
     .iter()
     .map(|s| s.to_string())
@@ -50,14 +31,20 @@ fn avoid_checkmate_in_one() {
 
     test_utils::apply_position(move_sequence, &mut game_state, &move_generator);
 
-    let (best_move, _, _) = negamax_alpha_beta_with_trasposition_table(&mut game_state, &move_generator, &mut transposition_table, 3); 
+    let (best_move, _, _) = negamax_alpha_beta_with_trasposition_table(
+        &mut game_state,
+        &move_generator,
+        &mut transposition_table,
+        3,
+    );
 
     game_state.apply_move_mut(best_move.unwrap());
 
     let uci_move_to_counter = parse_move("d5g2").unwrap();
 
-    let move_to_counter = move_generator.get_move(&game_state, uci_move_to_counter.0, uci_move_to_counter.1);
-    
+    let move_to_counter =
+        move_generator.get_move(&game_state, uci_move_to_counter.0, uci_move_to_counter.1);
+
     match move_to_counter {
         // ok, move was prevented
         None => return,
@@ -68,19 +55,14 @@ fn avoid_checkmate_in_one() {
             assert!(!generated_moves.is_checkmate());
         }
     };
-
 }
-
 
 #[test]
 fn find_fools_mate_white() {
-    let move_sequence: Vec<String> = [
-        "e2e3", "f7f6",
-        "a2a3", "g7g5",
-    ]
-    .iter()
-    .map(|s| s.to_string())
-    .collect();
+    let move_sequence: Vec<String> = ["e2e3", "f7f6", "a2a3", "g7g5"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
 
     let mut game_state = GameState::new();
     let move_generator = MoveGenerator::new();
@@ -88,20 +70,22 @@ fn find_fools_mate_white() {
 
     test_utils::apply_position(move_sequence, &mut game_state, &move_generator);
 
-    let (best_move, _, _) = negamax_alpha_beta_with_trasposition_table(&mut game_state, &move_generator, &mut transposition_table, 3); 
+    let (best_move, _, _) = negamax_alpha_beta_with_trasposition_table(
+        &mut game_state,
+        &move_generator,
+        &mut transposition_table,
+        3,
+    );
 
-    assert_eq!(best_move.unwrap().to, Position::new(8, 5)); 
+    assert_eq!(best_move.unwrap().to, Position::new(8, 5));
 }
 
 #[test]
 fn find_fools_mate_black() {
-    let move_sequence: Vec<String> = [
-        "f2f3", "e7e6",
-        "g2g4",
-    ]
-    .iter()
-    .map(|s| s.to_string())
-    .collect();
+    let move_sequence: Vec<String> = ["f2f3", "e7e6", "g2g4"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
 
     let mut game_state = GameState::new();
     let move_generator = MoveGenerator::new();
@@ -109,7 +93,12 @@ fn find_fools_mate_black() {
 
     test_utils::apply_position(move_sequence, &mut game_state, &move_generator);
 
-    let (best_move, _, _) = negamax_alpha_beta_with_trasposition_table(&mut game_state, &move_generator, &mut transposition_table, 3); 
+    let (best_move, _, _) = negamax_alpha_beta_with_trasposition_table(
+        &mut game_state,
+        &move_generator,
+        &mut transposition_table,
+        3,
+    );
 
-    assert_eq!(best_move.unwrap().to, Position::new(8, 4)); 
+    assert_eq!(best_move.unwrap().to, Position::new(8, 4));
 }

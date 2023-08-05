@@ -1,7 +1,7 @@
 #[cfg(test)]
-use crate::model::{game_state, move_generator};
+use crate::model::game_state::{CastlingRights, Move, MoveType, Piece, Position};
 #[cfg(test)]
-use crate::model::game_state::{Move, MoveType, Position, Piece, CastlingRights};
+use crate::model::{game_state, move_generator};
 
 #[test]
 fn zobrish_hash_is_reversible_from_starting_position() {
@@ -24,16 +24,16 @@ fn zobrish_hash_is_reversible_from_starting_position() {
 #[test]
 fn zobrist_hash_is_reversible_in_scandinavian_starting_sequence() {
     let scandinavian_opening_sequence = [
-        Move { 
+        Move {
             from: Position::new(5, 2),
             to: Position::new(5, 4),
             move_type: MoveType::Step,
             moving_piece: Piece::PAWN,
             promotes_to: None,
-            last_en_passant: None, 
+            last_en_passant: None,
             last_castling_rights: CastlingRights::initial(),
         },
-        Move { 
+        Move {
             from: Position::new(4, 7),
             to: Position::new(4, 5),
             move_type: MoveType::Step,
@@ -42,24 +42,24 @@ fn zobrist_hash_is_reversible_in_scandinavian_starting_sequence() {
             last_en_passant: Some(Position::new(5, 4)),
             last_castling_rights: CastlingRights::initial(),
         },
-        Move { 
+        Move {
             from: Position::new(5, 4),
             to: Position::new(4, 5),
             move_type: MoveType::Capture(Piece::PAWN),
-            moving_piece: Piece::PAWN, 
+            moving_piece: Piece::PAWN,
             promotes_to: None,
             last_en_passant: Some(Position::new(4, 5)),
             last_castling_rights: CastlingRights::initial(),
         },
-        Move { 
+        Move {
             from: Position::new(4, 8),
             to: Position::new(4, 5),
             move_type: MoveType::Capture(Piece::PAWN),
-            moving_piece: Piece::QUEEN, 
+            moving_piece: Piece::QUEEN,
             promotes_to: None,
             last_en_passant: None,
             last_castling_rights: CastlingRights::initial(),
-        }
+        },
     ];
 
     let mut state = game_state::GameState::new();
@@ -76,5 +76,4 @@ fn zobrist_hash_is_reversible_in_scandinavian_starting_sequence() {
 
         state.apply_move_mut(*m);
     }
-
 }

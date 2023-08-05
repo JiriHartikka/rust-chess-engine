@@ -1,17 +1,16 @@
-use std::time::{Duration, Instant};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use crossbeam::thread::scope;
 
-use crate::model::game_state::{GameState, Move, Color};
-use crate::model::move_generator::MoveGenerator;
 use crate::model::evaluator;
-use crate::search::transposition_table::{TranspositionTable, MatchType};
+use crate::model::game_state::{Color, GameState, Move};
+use crate::model::move_generator::MoveGenerator;
+use crate::search::transposition_table::{MatchType, TranspositionTable};
 
-
-// we rely on the invariance of the expression EVAL_MIN = -EVAL_MAX 
-// which does not hold for i32::MAX and i32::MIN 
+// we rely on the invariance of the expression EVAL_MIN = -EVAL_MAX
+// which does not hold for i32::MAX and i32::MIN
 const EVAL_MAX: i32 = i32::MAX;
 const EVAL_MIN: i32 = -EVAL_MAX;
 
@@ -19,12 +18,26 @@ type Evaluation = i32;
 type SearchCount = u64;
 type SearchResult = (Option<Move>, Evaluation, SearchCount);
 
-pub fn negamax_alpha_beta(game_state: &mut GameState, move_generator: &MoveGenerator, depth: u16) -> SearchResult {
+pub fn negamax_alpha_beta(
+    game_state: &mut GameState,
+    move_generator: &MoveGenerator,
+    depth: u16,
+) -> SearchResult {
     negamax_alpha_beta_helper(game_state, move_generator, EVAL_MIN, EVAL_MAX, depth)
 }
 
-fn negamax_alpha_beta_helper(game_state: &mut GameState, move_generator: &MoveGenerator, alpha: i32, beta: i32, depth: u16) -> SearchResult {
-    let color_multiplier = if game_state.to_move() == Color::WHITE { 1 } else { -1 };
+fn negamax_alpha_beta_helper(
+    game_state: &mut GameState,
+    move_generator: &MoveGenerator,
+    alpha: i32,
+    beta: i32,
+    depth: u16,
+) -> SearchResult {
+    let color_multiplier = if game_state.to_move() == Color::WHITE {
+        1
+    } else {
+        -1
+    };
 
     if depth == 0 {
         return (None, color_multiplier * evaluator::evaluate(game_state), 1);
@@ -49,9 +62,10 @@ fn negamax_alpha_beta_helper(game_state: &mut GameState, move_generator: &MoveGe
 
     for next_move in next_moves.moves {
         game_state.apply_move_mut(next_move);
-        let (_, eval, child_node_count) = negamax_alpha_beta_helper(game_state, move_generator, -beta, -current_alpha, depth - 1);
+        let (_, eval, child_node_count) =
+            negamax_alpha_beta_helper(game_state, move_generator, -beta, -current_alpha, depth - 1);
         game_state.unapply_move_mut(next_move);
-    
+
         node_count += child_node_count;
 
         if -eval > best_eval {
@@ -60,7 +74,7 @@ fn negamax_alpha_beta_helper(game_state: &mut GameState, move_generator: &MoveGe
         }
 
         current_alpha = i32::max(current_alpha, best_eval);
-        
+
         if current_alpha >= beta {
             break;
         }
@@ -69,12 +83,37 @@ fn negamax_alpha_beta_helper(game_state: &mut GameState, move_generator: &MoveGe
     (best_move, best_eval, node_count)
 }
 
-pub fn negamax_alpha_beta_with_trasposition_table(game_state: &mut GameState, move_generator: &MoveGenerator, table: &mut TranspositionTable, depth: u16) -> (Option<Move>, i32, u64) {
-    negamax_alpha_beta_with_trasposition_table_helper(game_state, move_generator, table, EVAL_MIN, EVAL_MAX, depth, depth)
+pub fn negamax_alpha_beta_with_trasposition_table(
+    game_state: &mut GameState,
+    move_generator: &MoveGenerator,
+    table: &mut TranspositionTable,
+    depth: u16,
+) -> (Option<Move>, i32, u64) {
+    negamax_alpha_beta_with_trasposition_table_helper(
+        game_state,
+        move_generator,
+        table,
+        EVAL_MIN,
+        EVAL_MAX,
+        depth,
+        depth,
+    )
 }
 
-fn negamax_alpha_beta_with_trasposition_table_helper(game_state: &mut GameState, move_generator: &MoveGenerator, table: &mut TranspositionTable, alpha: i32, beta: i32, depth: u16, starting_depth: u16) -> SearchResult {
-    let color_multiplier = if game_state.to_move() == Color::WHITE { 1 } else { -1 };
+fn negamax_alpha_beta_with_trasposition_table_helper(
+    game_state: &mut GameState,
+    move_generator: &MoveGenerator,
+    table: &mut TranspositionTable,
+    alpha: i32,
+    beta: i32,
+    depth: u16,
+    starting_depth: u16,
+) -> SearchResult {
+    let color_multiplier = if game_state.to_move() == Color::WHITE {
+        1
+    } else {
+        -1
+    };
 
     let mut current_alpha = alpha;
     let mut current_beta = beta;
@@ -85,22 +124,22 @@ fn negamax_alpha_beta_with_trasposition_table_helper(game_state: &mut GameState,
         if let Some((match_type, eval)) = table.check(game_state.zobrist_hash, depth) {
             match match_type {
                 MatchType::EXACT => {
-                    return (None, eval, 0);        
-                },
+                    return (None, eval, 0);
+                }
                 MatchType::LOWERBOUND => {
                     current_alpha = i32::max(current_alpha, eval);
-                },
+                }
                 MatchType::UPPERBOUND => {
                     current_beta = i32::min(current_beta, eval);
-                },
+                }
             }
 
             if current_alpha >= current_beta {
-                return (None, eval, 0)
+                return (None, eval, 0);
             }
         }
     }
-    
+
     if depth == 0 {
         let eval = color_multiplier * evaluator::evaluate(&game_state);
         return (None, eval, 1);
@@ -109,7 +148,11 @@ fn negamax_alpha_beta_with_trasposition_table_helper(game_state: &mut GameState,
     let next_moves = move_generator.generate_moves(game_state);
 
     if next_moves.is_checkmate() {
-        return (None, -(EVAL_MAX - 10_000 * i32::from(starting_depth - depth)), 1);
+        return (
+            None,
+            -(EVAL_MAX - 10_000 * i32::from(starting_depth - depth)),
+            1,
+        );
     }
 
     if next_moves.moves.is_empty() {
@@ -124,9 +167,17 @@ fn negamax_alpha_beta_with_trasposition_table_helper(game_state: &mut GameState,
 
     for next_move in next_moves.moves {
         game_state.apply_move_mut(next_move);
-        let (_, eval, child_node_count) = negamax_alpha_beta_with_trasposition_table_helper(game_state, move_generator, table, -current_beta, -current_alpha, depth - 1, starting_depth);
+        let (_, eval, child_node_count) = negamax_alpha_beta_with_trasposition_table_helper(
+            game_state,
+            move_generator,
+            table,
+            -current_beta,
+            -current_alpha,
+            depth - 1,
+            starting_depth,
+        );
         game_state.unapply_move_mut(next_move);
-        
+
         node_count += child_node_count;
 
         if -eval > best_eval {
@@ -135,7 +186,7 @@ fn negamax_alpha_beta_with_trasposition_table_helper(game_state: &mut GameState,
         }
 
         current_alpha = i32::max(current_alpha, best_eval);
-        
+
         if current_alpha >= current_beta {
             break;
         }
@@ -160,9 +211,19 @@ fn negamax_alpha_beta_with_trasposition_table_and_principal_variation(
     table: &mut TranspositionTable,
     principal_move: Option<&Move>,
     depth: u16,
-    stop: Arc<Mutex<bool>>) -> (Option<Move>, i32, u64) {
-    
-    negamax_alpha_beta_with_trasposition_table_and_principal_variation_helper(game_state, move_generator, table, EVAL_MIN, EVAL_MAX, principal_move, depth, depth, stop)
+    stop: Arc<Mutex<bool>>,
+) -> (Option<Move>, i32, u64) {
+    negamax_alpha_beta_with_trasposition_table_and_principal_variation_helper(
+        game_state,
+        move_generator,
+        table,
+        EVAL_MIN,
+        EVAL_MAX,
+        principal_move,
+        depth,
+        depth,
+        stop,
+    )
 }
 
 fn negamax_alpha_beta_with_trasposition_table_and_principal_variation_helper(
@@ -174,14 +235,18 @@ fn negamax_alpha_beta_with_trasposition_table_and_principal_variation_helper(
     principal_move: Option<&Move>,
     depth: u16,
     starting_depth: u16,
-    stop: Arc<Mutex<bool>>) -> (Option<Move>, i32, u64) {
-
-    // stop when signaled   
+    stop: Arc<Mutex<bool>>,
+) -> (Option<Move>, i32, u64) {
+    // stop when signaled
     if *stop.lock().unwrap() {
         return (None, 0, 0);
     }
 
-    let color_multiplier = if game_state.to_move() == Color::WHITE { 1 } else { -1 };
+    let color_multiplier = if game_state.to_move() == Color::WHITE {
+        1
+    } else {
+        -1
+    };
 
     let mut current_alpha = alpha;
     let mut current_beta = beta;
@@ -192,22 +257,22 @@ fn negamax_alpha_beta_with_trasposition_table_and_principal_variation_helper(
         if let Some((match_type, eval)) = table.check(game_state.zobrist_hash, depth) {
             match match_type {
                 MatchType::EXACT => {
-                    return (None, eval, 0);        
-                },
+                    return (None, eval, 0);
+                }
                 MatchType::LOWERBOUND => {
                     current_alpha = i32::max(current_alpha, eval);
-                },
+                }
                 MatchType::UPPERBOUND => {
                     current_beta = i32::min(current_beta, eval);
-                },
+                }
             }
 
             if current_alpha >= current_beta {
-                return (None, eval, 0)
+                return (None, eval, 0);
             }
         }
     }
-    
+
     if depth == 0 {
         let eval = color_multiplier * evaluator::evaluate(&game_state);
         return (None, eval, 1);
@@ -216,7 +281,11 @@ fn negamax_alpha_beta_with_trasposition_table_and_principal_variation_helper(
     let mut next_moves = move_generator.generate_moves(game_state);
 
     if next_moves.is_checkmate() {
-        return (None, -(EVAL_MAX - 10_000 * i32::from(starting_depth - depth)), 1);
+        return (
+            None,
+            -(EVAL_MAX - 10_000 * i32::from(starting_depth - depth)),
+            1,
+        );
     }
 
     if next_moves.moves.is_empty() {
@@ -224,7 +293,11 @@ fn negamax_alpha_beta_with_trasposition_table_and_principal_variation_helper(
     }
 
     //order moves, taking the principal variation first if available
-    if let Some(index) = next_moves.moves.iter().position(|m| Some(m) == principal_move) {
+    if let Some(index) = next_moves
+        .moves
+        .iter()
+        .position(|m| Some(m) == principal_move)
+    {
         next_moves.moves.swap(0, index);
     }
 
@@ -234,9 +307,20 @@ fn negamax_alpha_beta_with_trasposition_table_and_principal_variation_helper(
 
     for next_move in next_moves.moves {
         game_state.apply_move_mut(next_move);
-        let (_, eval, child_node_count) = negamax_alpha_beta_with_trasposition_table_and_principal_variation_helper(game_state, move_generator, table, -current_beta, -current_alpha, principal_move, depth - 1, starting_depth, stop.clone());
+        let (_, eval, child_node_count) =
+            negamax_alpha_beta_with_trasposition_table_and_principal_variation_helper(
+                game_state,
+                move_generator,
+                table,
+                -current_beta,
+                -current_alpha,
+                principal_move,
+                depth - 1,
+                starting_depth,
+                stop.clone(),
+            );
         game_state.unapply_move_mut(next_move);
-        
+
         node_count += child_node_count;
 
         if -eval > best_eval {
@@ -245,7 +329,7 @@ fn negamax_alpha_beta_with_trasposition_table_and_principal_variation_helper(
         }
 
         current_alpha = i32::max(current_alpha, best_eval);
-        
+
         if current_alpha >= current_beta {
             break;
         }
@@ -264,20 +348,31 @@ fn negamax_alpha_beta_with_trasposition_table_and_principal_variation_helper(
     (best_move, best_eval, node_count)
 }
 
-
-pub fn iterative_alpha_beta(game_state: &mut GameState, move_generator: &MoveGenerator, table: &mut TranspositionTable, search_time: Duration) -> (Option<Move>, i32, u16) {
+pub fn iterative_alpha_beta(
+    game_state: &mut GameState,
+    move_generator: &MoveGenerator,
+    table: &mut TranspositionTable,
+    search_time: Duration,
+) -> (Option<Move>, i32, u16) {
     let start = Instant::now();
 
     let stop_signal = Arc::new(Mutex::new(false));
     let mut depth = 1;
     let stop_signal_clone = stop_signal.clone();
-    let (init_best_move, init_best_eval, _) = negamax_alpha_beta_with_trasposition_table_and_principal_variation(game_state, move_generator, table, None, 1, stop_signal_clone);
+    let (init_best_move, init_best_eval, _) =
+        negamax_alpha_beta_with_trasposition_table_and_principal_variation(
+            game_state,
+            move_generator,
+            table,
+            None,
+            1,
+            stop_signal_clone,
+        );
     let mut best_move = match init_best_move {
         Some(m) => m,
         None => return (None, init_best_eval, depth),
     };
     let mut best_eval = init_best_eval;
-
 
     while start.elapsed() < search_time {
         depth += 1;
@@ -288,7 +383,15 @@ pub fn iterative_alpha_beta(game_state: &mut GameState, move_generator: &MoveGen
         scope(|s| {
             s.spawn(|_| {
                 let sender = sender;
-                let (current_best_move, current_best_eval, _) = negamax_alpha_beta_with_trasposition_table_and_principal_variation(game_state, move_generator, table, Some(&best_move_clone), depth, stop_signal_clone);
+                let (current_best_move, current_best_eval, _) =
+                    negamax_alpha_beta_with_trasposition_table_and_principal_variation(
+                        game_state,
+                        move_generator,
+                        table,
+                        Some(&best_move_clone),
+                        depth,
+                        stop_signal_clone,
+                    );
                 sender.send((current_best_move, current_best_eval)).unwrap();
             });
 
@@ -298,15 +401,14 @@ pub fn iterative_alpha_beta(game_state: &mut GameState, move_generator: &MoveGen
                         best_move = m;
                     }
                     best_eval = cur_best_eval;
-                },
+                }
                 Err(_) => {
                     *stop_signal.lock().unwrap() = true;
-                },
-            };    
-
-        }).unwrap();
+                }
+            };
+        })
+        .unwrap();
     }
-    
+
     (Some(best_move), best_eval, depth)
 }
-

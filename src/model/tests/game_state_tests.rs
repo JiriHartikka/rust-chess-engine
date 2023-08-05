@@ -1,12 +1,12 @@
 #[cfg(test)]
 use crate::model::game_state;
 #[cfg(test)]
-use crate::model::game_state::{Position, Piece, Color};
+use crate::model::game_state::{Color, Piece, Position};
 
 #[test]
 fn get_pieces() {
     let board = game_state::GameState::new();
-    
+
     let e2 = board.get_piece(Position::new(5, 2));
     let a7 = board.get_piece(Position::new(1, 7));
     let e8 = board.get_piece(Position::new(5, 8));
@@ -23,14 +23,14 @@ fn get_piece_positions_rook() {
     let white_rooks = board.get_piece_position(Piece::ROOK, Color::WHITE);
     let black_rooks = board.get_piece_position(Piece::ROOK, Color::BLACK);
 
-    assert_eq!(vec![Position::new(1,1), Position::new(8, 1)], white_rooks);
+    assert_eq!(vec![Position::new(1, 1), Position::new(8, 1)], white_rooks);
     assert_eq!(vec![Position::new(1, 8), Position::new(8, 8)], black_rooks);
 }
 
 #[test]
 fn get_piece_positions_pawn() {
     let board = game_state::GameState::new();
-    
+
     let mut expected_white = vec![];
     let mut expected_black = vec![];
 
@@ -49,7 +49,7 @@ fn get_piece_positions_pawn() {
 #[test]
 fn get_piece_positions_king() {
     let board = game_state::GameState::new();
-    
+
     let expected_white = vec![Position::new(5, 1)];
     let expected_black = vec![Position::new(5, 8)];
 
