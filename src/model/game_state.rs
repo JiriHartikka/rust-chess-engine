@@ -1,6 +1,6 @@
-use std::fmt::{Display, Debug, Formatter, Error};
-use std::convert::TryFrom;
 use super::zobrist_hash;
+use std::convert::TryFrom;
+use std::fmt::{Debug, Display, Error, Formatter};
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum MoveType {
@@ -73,7 +73,7 @@ impl Color {
 
 #[derive(Eq, PartialEq, Copy, Clone, Ord, PartialOrd)]
 pub struct Position {
-    position: u8
+    position: u8,
 }
 
 impl Position {
@@ -86,7 +86,7 @@ impl Position {
         }
 
         Position {
-            position: (file - 1) + (rank - 1) * 8
+            position: (file - 1) + (rank - 1) * 8,
         }
     }
 
@@ -100,12 +100,15 @@ impl Position {
 
         if new_file < 1 || new_file > 8 {
             return Option::None;
-        } 
+        }
         if new_rank < 1 || new_rank > 8 {
             return Option::None;
         }
 
-        let new_position = Position::new(u8::try_from(new_file).unwrap(), u8::try_from(new_rank).unwrap());
+        let new_position = Position::new(
+            u8::try_from(new_file).unwrap(),
+            u8::try_from(new_rank).unwrap(),
+        );
 
         Option::Some(new_position)
     }
@@ -115,7 +118,9 @@ impl Position {
     }
 
     pub fn from_numeric(numeric_position: u8) -> Self {
-        Position { position: numeric_position }
+        Position {
+            position: numeric_position,
+        }
     }
 
     pub fn rank(&self) -> u8 {
@@ -133,7 +138,7 @@ impl Position {
 
 impl Display for Position {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        let file_repr = std::char::from_u32(('A' as u32) + (self.file() as u32 - 1)); 
+        let file_repr = std::char::from_u32(('A' as u32) + (self.file() as u32 - 1));
         let rank_repr = self.rank().to_string();
 
         if let Some(repr) = file_repr {
@@ -142,7 +147,7 @@ impl Display for Position {
             Err(Error)
         }
     }
-} 
+}
 
 impl Debug for Position {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
@@ -283,58 +288,93 @@ impl GameState {
     }
 
     pub fn collide_mask_color(&self, to_test: u64, color: Color) -> u64 {
-        to_test & if color == Color::WHITE { self.white_mask() } else { self.black_mask() }
+        to_test
+            & if color == Color::WHITE {
+                self.white_mask()
+            } else {
+                self.black_mask()
+            }
     }
 
-    fn white_mask(&self) -> u64 { 
-        self.white_pawn | self.white_knight | self.white_bishop | self.white_rook | self.white_queen | self.white_king
+    fn white_mask(&self) -> u64 {
+        self.white_pawn
+            | self.white_knight
+            | self.white_bishop
+            | self.white_rook
+            | self.white_queen
+            | self.white_king
     }
 
     fn black_mask(&self) -> u64 {
-        self.black_pawn | self.black_knight | self.black_bishop | self.black_rook | self.black_queen | self.black_king
+        self.black_pawn
+            | self.black_knight
+            | self.black_bishop
+            | self.black_rook
+            | self.black_queen
+            | self.black_king
     }
 
     pub fn apply_move(&self, to_apply: Move) -> GameState {
-        let mut new_state  = *self;
+        let mut new_state = *self;
         new_state.apply_move_mut(to_apply);
         new_state
     }
 
     pub fn apply_move_mut(&mut self, to_apply: Move) {
-        self.zobrist_hash = zobrist_hash::apply_move(self.zobrist_hash, &self.castling_rights, to_apply, self.to_move());
+        self.zobrist_hash = zobrist_hash::apply_move(
+            self.zobrist_hash,
+            &self.castling_rights,
+            to_apply,
+            self.to_move(),
+        );
 
         let moving_piece = to_apply.moving_piece;
         let piece_mask_for_moving = *self.get_piece_mask(moving_piece, self.to_move());
-        
+
         match to_apply.move_type {
             MoveType::Capture(captured_piece) => {
-                let new_state_taken_piece_mask = self.get_piece_mask_mut(captured_piece, self.to_move().opposite());
+                let new_state_taken_piece_mask =
+                    self.get_piece_mask_mut(captured_piece, self.to_move().opposite());
                 *new_state_taken_piece_mask ^= to_apply.to.to_bit_mask();
 
                 if captured_piece == Piece::ROOK {
                     if to_apply.to.file() == 1 {
-                        *self.castling_rights.get_queen_side_mut(self.to_move().opposite()) = false;
+                        *self
+                            .castling_rights
+                            .get_queen_side_mut(self.to_move().opposite()) = false;
                     } else if to_apply.to.file() == 8 {
-                        *self.castling_rights.get_king_side_mut(self.to_move().opposite()) = false;
+                        *self
+                            .castling_rights
+                            .get_king_side_mut(self.to_move().opposite()) = false;
                     }
                 }
-            },
+            }
             MoveType::EnPassant => {
                 let direction_multiplier = if self.to_move == Color::WHITE { 1 } else { -1 };
-                let new_state_taken_piece_mask = self.get_piece_mask_mut(Piece::PAWN, self.to_move().opposite());
-                *new_state_taken_piece_mask = *new_state_taken_piece_mask ^ (to_apply.to.delta(0, -direction_multiplier).unwrap().to_bit_mask());
-            },
+                let new_state_taken_piece_mask =
+                    self.get_piece_mask_mut(Piece::PAWN, self.to_move().opposite());
+                *new_state_taken_piece_mask = *new_state_taken_piece_mask
+                    ^ (to_apply
+                        .to
+                        .delta(0, -direction_multiplier)
+                        .unwrap()
+                        .to_bit_mask());
+            }
             MoveType::Castling => {
                 let rank = to_apply.from.rank();
-                let (old_rook_file, new_rook_file) = if to_apply.to.file() < 5 { (1, 4) } else { (8, 6) };
+                let (old_rook_file, new_rook_file) = if to_apply.to.file() < 5 {
+                    (1, 4)
+                } else {
+                    (8, 6)
+                };
                 let old_rook_position = Position::new(old_rook_file, rank);
                 let new_rook_position = Position::new(new_rook_file, rank);
                 let rook_piece_mask = self.get_piece_mask_mut(Piece::ROOK, self.to_move());
                 *rook_piece_mask ^= old_rook_position.to_bit_mask();
-                *rook_piece_mask ^=  new_rook_position.to_bit_mask();
+                *rook_piece_mask ^= new_rook_position.to_bit_mask();
                 *self.castling_rights.get_king_side_mut(self.to_move) = false;
                 *self.castling_rights.get_queen_side_mut(self.to_move) = false;
-            },
+            }
             MoveType::Step => (),
         }
 
@@ -343,18 +383,21 @@ impl GameState {
         match to_apply.promotes_to {
             None => {
                 moving_piece_zor = moving_piece_zor | to_apply.to.to_bit_mask();
-            },
+            }
             Some(piece) => {
-                *self.get_piece_mask_mut(piece, self.to_move) ^= to_apply.to.to_bit_mask(); 
-            },
+                *self.get_piece_mask_mut(piece, self.to_move) ^= to_apply.to.to_bit_mask();
+            }
         }
 
-        // update moving piece 
-        *self.get_piece_mask_mut(moving_piece, self.to_move()) = piece_mask_for_moving ^ moving_piece_zor;
+        // update moving piece
+        *self.get_piece_mask_mut(moving_piece, self.to_move()) =
+            piece_mask_for_moving ^ moving_piece_zor;
 
         // set en passant bit mask
         if moving_piece == Piece::PAWN {
-            let is_two_steps_move = i16::abs(i16::from(to_apply.from.to_numeric()) - i16::from(to_apply.to.to_numeric())) == 16;
+            let is_two_steps_move = i16::abs(
+                i16::from(to_apply.from.to_numeric()) - i16::from(to_apply.to.to_numeric()),
+            ) == 16;
             if is_two_steps_move {
                 self.en_passant = Some(to_apply.to);
             } else {
@@ -370,7 +413,7 @@ impl GameState {
             *self.castling_rights.get_queen_side_mut(self.to_move) = false;
         }
 
-        // lose queen side castling rights when queen side rook moves 
+        // lose queen side castling rights when queen side rook moves
         if moving_piece == Piece::ROOK && to_apply.from.file() == 1 {
             *self.castling_rights.get_queen_side_mut(self.to_move()) = false;
         }
@@ -384,30 +427,52 @@ impl GameState {
     }
 
     pub fn unapply_move_mut(&mut self, to_unapply: Move) {
-        self.zobrist_hash = zobrist_hash::unapply_move(self.zobrist_hash, &self.castling_rights, to_unapply, self.to_move());
+        self.zobrist_hash = zobrist_hash::unapply_move(
+            self.zobrist_hash,
+            &self.castling_rights,
+            to_unapply,
+            self.to_move(),
+        );
 
         let moving_piece = to_unapply.moving_piece;
         let piece_mask_for_moving = *self.get_piece_mask(moving_piece, self.to_move().opposite());
-        
+
         match to_unapply.move_type {
             MoveType::Capture(captured_piece) => {
-                let new_state_taken_piece_mask = self.get_piece_mask_mut(captured_piece, self.to_move());
-                *new_state_taken_piece_mask = *new_state_taken_piece_mask ^ to_unapply.to.to_bit_mask();
-            },
+                let new_state_taken_piece_mask =
+                    self.get_piece_mask_mut(captured_piece, self.to_move());
+                *new_state_taken_piece_mask =
+                    *new_state_taken_piece_mask ^ to_unapply.to.to_bit_mask();
+            }
             MoveType::EnPassant => {
-                let direction_multiplier = if self.to_move.opposite() == Color::WHITE { 1 } else { -1 };
-                let new_state_taken_piece_mask = self.get_piece_mask_mut(Piece::PAWN, self.to_move());
-                *new_state_taken_piece_mask = *new_state_taken_piece_mask ^ (to_unapply.to.delta(0, -direction_multiplier).unwrap().to_bit_mask());
-            },
+                let direction_multiplier = if self.to_move.opposite() == Color::WHITE {
+                    1
+                } else {
+                    -1
+                };
+                let new_state_taken_piece_mask =
+                    self.get_piece_mask_mut(Piece::PAWN, self.to_move());
+                *new_state_taken_piece_mask = *new_state_taken_piece_mask
+                    ^ (to_unapply
+                        .to
+                        .delta(0, -direction_multiplier)
+                        .unwrap()
+                        .to_bit_mask());
+            }
             MoveType::Castling => {
                 let rank = to_unapply.from.rank();
-                let (old_rook_file, new_rook_file) = if to_unapply.to.file() < 5 { (1, 4) } else { (8, 6) };
+                let (old_rook_file, new_rook_file) = if to_unapply.to.file() < 5 {
+                    (1, 4)
+                } else {
+                    (8, 6)
+                };
                 let old_rook_position = Position::new(old_rook_file, rank);
                 let new_rook_position = Position::new(new_rook_file, rank);
-                let rook_piece_mask = self.get_piece_mask_mut(Piece::ROOK, self.to_move().opposite());
+                let rook_piece_mask =
+                    self.get_piece_mask_mut(Piece::ROOK, self.to_move().opposite());
                 *rook_piece_mask = *rook_piece_mask ^ old_rook_position.to_bit_mask();
                 *rook_piece_mask = *rook_piece_mask ^ new_rook_position.to_bit_mask();
-            },
+            }
             MoveType::Step => (),
         }
 
@@ -416,15 +481,16 @@ impl GameState {
         match to_unapply.promotes_to {
             None => {
                 moving_piece_zor = moving_piece_zor | to_unapply.to.to_bit_mask();
-            },
+            }
             Some(piece) => {
-                *self.get_piece_mask_mut(piece, self.to_move.opposite()) ^= to_unapply.to.to_bit_mask(); 
-            },
+                *self.get_piece_mask_mut(piece, self.to_move.opposite()) ^=
+                    to_unapply.to.to_bit_mask();
+            }
         }
 
-        // update moving piece 
-        *self.get_piece_mask_mut(moving_piece, self.to_move().opposite()) = piece_mask_for_moving ^ moving_piece_zor;
-
+        // update moving piece
+        *self.get_piece_mask_mut(moving_piece, self.to_move().opposite()) =
+            piece_mask_for_moving ^ moving_piece_zor;
 
         self.en_passant = to_unapply.last_en_passant;
         self.castling_rights = to_unapply.last_castling_rights;
@@ -466,22 +532,20 @@ impl GameState {
     }
 
     fn square_to_unicode(&self, position: Position) -> &str {
-        let maybe_piece = self.get_piece(position)
-            .map(|piece|  
-                match piece {
-                    (Piece::PAWN, Color::WHITE) => "♙",
-                    (Piece::KNIGHT, Color::WHITE) => "♘",
-                    (Piece::BISHOP, Color::WHITE) => "♗",
-                    (Piece::ROOK, Color::WHITE)  => "♖",
-                    (Piece::QUEEN, Color::WHITE) => "♕",
-                    (Piece::KING, Color::WHITE) => "♔",
-                    (Piece::PAWN, Color::BLACK) => "♟︎",
-                    (Piece::KNIGHT, Color::BLACK) => "♞",
-                    (Piece::BISHOP, Color::BLACK) => "♝",
-                    (Piece::ROOK, Color::BLACK) => "♜",
-                    (Piece::QUEEN, Color::BLACK) => "♛",
-                    (Piece::KING, Color::BLACK) => "♚",
-            });
+        let maybe_piece = self.get_piece(position).map(|piece| match piece {
+            (Piece::PAWN, Color::WHITE) => "♙",
+            (Piece::KNIGHT, Color::WHITE) => "♘",
+            (Piece::BISHOP, Color::WHITE) => "♗",
+            (Piece::ROOK, Color::WHITE) => "♖",
+            (Piece::QUEEN, Color::WHITE) => "♕",
+            (Piece::KING, Color::WHITE) => "♔",
+            (Piece::PAWN, Color::BLACK) => "♟︎",
+            (Piece::KNIGHT, Color::BLACK) => "♞",
+            (Piece::BISHOP, Color::BLACK) => "♝",
+            (Piece::ROOK, Color::BLACK) => "♜",
+            (Piece::QUEEN, Color::BLACK) => "♛",
+            (Piece::KING, Color::BLACK) => "♚",
+        });
         maybe_piece.unwrap_or(" ")
     }
 
@@ -491,10 +555,10 @@ impl GameState {
         if self.white_pawn & bit_mask > 0 {
             Option::Some((Piece::PAWN, Color::WHITE))
         } else if self.white_knight & bit_mask > 0 {
-            Option::Some((Piece::KNIGHT, Color::WHITE)) 
+            Option::Some((Piece::KNIGHT, Color::WHITE))
         } else if self.white_bishop & bit_mask > 0 {
             Option::Some((Piece::BISHOP, Color::WHITE))
-        } else if self.white_rook & bit_mask > 0{
+        } else if self.white_rook & bit_mask > 0 {
             Option::Some((Piece::ROOK, Color::WHITE))
         } else if self.white_queen & bit_mask > 0 {
             Option::Some((Piece::QUEEN, Color::WHITE))
@@ -505,7 +569,7 @@ impl GameState {
         } else if self.black_knight & bit_mask > 0 {
             Option::Some((Piece::KNIGHT, Color::BLACK))
         } else if self.black_bishop & bit_mask > 0 {
-            Option::Some(( Piece::BISHOP, Color::BLACK))
+            Option::Some((Piece::BISHOP, Color::BLACK))
         } else if self.black_rook & bit_mask > 0 {
             Option::Some((Piece::ROOK, Color::BLACK))
         } else if self.black_queen & bit_mask > 0 {
@@ -522,16 +586,15 @@ impl GameState {
 
         for rank in (1..9).rev() {
             for file in 1..9 {
-                builder.push_str(self.square_to_unicode(Position::new(file, rank)));            
+                builder.push_str(self.square_to_unicode(Position::new(file, rank)));
             }
             if rank > 1 {
                 builder.push_str("\n");
-            }   
+            }
         }
 
         builder
     }
-
 }
 
 impl Debug for GameState {
@@ -540,20 +603,21 @@ impl Debug for GameState {
     }
 }
 
-
 pub fn bit_mask_to_positions(bit_mask: u64) -> Vec<Position> {
     let mut vec = vec![];
     let mut current_pos = 0;
 
     let mut mask = bit_mask;
-    
+
     while mask > 0 {
         let trailing_zeros = mask.trailing_zeros();
         let (shifted, overflow) = mask.overflowing_shr(trailing_zeros + 1);
         mask = if overflow { 0 } else { shifted };
         current_pos += trailing_zeros + 1;
-        vec.push(Position::from_numeric(u8::try_from(current_pos - 1).unwrap()));
-    } 
+        vec.push(Position::from_numeric(
+            u8::try_from(current_pos - 1).unwrap(),
+        ));
+    }
 
     vec
 }

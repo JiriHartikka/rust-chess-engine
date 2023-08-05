@@ -31,7 +31,12 @@ pub fn attack_trace_for_bishop() -> Vec<Vec<Vec<Position>>> {
             let diagonal_trace3 = trace_with_delta(starting_pos, -1, 1);
             let diagonal_trace4 = trace_with_delta(starting_pos, 1, -1);
 
-            trace.push(vec![diagonal_trace1, diagonal_trace2, diagonal_trace3, diagonal_trace4])
+            trace.push(vec![
+                diagonal_trace1,
+                diagonal_trace2,
+                diagonal_trace3,
+                diagonal_trace4,
+            ])
         }
     }
 
@@ -44,9 +49,9 @@ pub fn attack_trace_for_queen() -> Vec<Vec<Vec<Position>>> {
     rook_trace
         .into_iter()
         .zip(bishop_trace.into_iter())
-        .map(|(mut rook_trace_pos, mut bishop_trace_pos)| { 
-            rook_trace_pos.append(&mut bishop_trace_pos); 
-            rook_trace_pos 
+        .map(|(mut rook_trace_pos, mut bishop_trace_pos)| {
+            rook_trace_pos.append(&mut bishop_trace_pos);
+            rook_trace_pos
         })
         .collect()
 }
@@ -60,7 +65,7 @@ pub fn attack_trace_for_knight() -> Vec<Vec<Vec<Position>>> {
             let mut trace_at_pos = Vec::new();
 
             let candidates: Vec<Position> = vec![
-                starting_pos.delta(1, 2), 
+                starting_pos.delta(1, 2),
                 starting_pos.delta(1, -2),
                 starting_pos.delta(-1, 2),
                 starting_pos.delta(-1, -2),
@@ -68,7 +73,10 @@ pub fn attack_trace_for_knight() -> Vec<Vec<Vec<Position>>> {
                 starting_pos.delta(2, -1),
                 starting_pos.delta(-2, 1),
                 starting_pos.delta(-2, -1),
-            ].into_iter().filter_map(|x| x).collect();
+            ]
+            .into_iter()
+            .filter_map(|x| x)
+            .collect();
 
             for x in candidates {
                 trace_at_pos.push(vec![x]);
@@ -79,7 +87,6 @@ pub fn attack_trace_for_knight() -> Vec<Vec<Vec<Position>>> {
 
     trace
 }
-
 
 fn trace_with_delta(starting_pos: Position, delta_file: i8, delta_rank: i8) -> Vec<Position> {
     let mut trace = Vec::new();

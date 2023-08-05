@@ -1,10 +1,10 @@
 use crate::model::game_state::{Color, GameState, Move, Position};
 use crate::model::move_generator::MoveGenerator;
-use crate::search::transposition_table::TranspositionTable;
 use crate::search::minimax_search::negamax_alpha_beta_with_trasposition_table;
+use crate::search::transposition_table::TranspositionTable;
 
-use std::io::{self, BufRead, Write};
 use std::convert::TryFrom;
+use std::io::{self, BufRead, Write};
 
 pub struct Game {
     ai_color: Color,
@@ -33,13 +33,18 @@ impl Game {
         println!("{:?}", self.game_state);
 
         if self.game_state.to_move() == self.ai_color {
-            let (maybe_best_move, _, _) = negamax_alpha_beta_with_trasposition_table(&mut self.game_state, &self.move_generator, &mut self.transposition_table, self.search_depth);
+            let (maybe_best_move, _, _) = negamax_alpha_beta_with_trasposition_table(
+                &mut self.game_state,
+                &self.move_generator,
+                &mut self.transposition_table,
+                self.search_depth,
+            );
             if let Some(best_move) = maybe_best_move {
                 self.game_state.apply_move_mut(best_move);
             } else {
                 println!("Game over");
                 return false;
-            }            
+            }
         } else {
             let player_move = self.read_player_move();
             self.game_state.apply_move_mut(player_move);
@@ -47,9 +52,8 @@ impl Game {
 
         true
     }
-    
-    fn read_player_move(&self) -> Move {
 
+    fn read_player_move(&self) -> Move {
         loop {
             print!("Your move:");
             io::stdout().flush().unwrap();
@@ -57,22 +61,22 @@ impl Game {
             let mut line = String::new();
             io::stdin().lock().read_line(&mut line).unwrap();
             let mut split = line.split_whitespace();
-        
+
             let (maybe_pos1_raw, maybe_pos2_raw) = (split.next(), split.next());
 
             let (pos1_raw, pos2_raw) = match (maybe_pos1_raw, maybe_pos2_raw) {
                 (Some(a), Some(b)) => (a, b),
                 (_, _) => continue,
             };
-            
+
             let pos1 = Game::parse_position(
                 pos1_raw.chars().nth(0).unwrap(),
-                pos1_raw.chars().nth(1).unwrap()
+                pos1_raw.chars().nth(1).unwrap(),
             );
 
             let pos2 = Game::parse_position(
                 pos2_raw.chars().nth(0).unwrap(),
-                pos2_raw.chars().nth(1).unwrap()
+                pos2_raw.chars().nth(1).unwrap(),
             );
 
             match (pos1, pos2) {
@@ -84,8 +88,7 @@ impl Game {
                             continue;
                         }
                     }
-
-                },
+                }
                 (_, _) => {
                     println!("Bad coordinates");
                     continue;
@@ -112,7 +115,6 @@ impl Game {
             .ok_or("Invalid rank")
             .and_then(|digit| u8::try_from(digit).map_err(|_| "Cannot convert from u32 to u8"));
 
-
         match (file, rank) {
             (Ok(file), Ok(rank)) => return Ok(Position::new(file, rank)),
             (Err(a), Ok(_)) => Err(a.to_string()),
@@ -120,5 +122,4 @@ impl Game {
             (Err(a), Err(b)) => Err(format!("{} and {}", a, b)),
         }
     }
-
 }

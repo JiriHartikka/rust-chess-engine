@@ -1,5 +1,5 @@
-use rust_chess::model::game_state::Color;
 use rust_chess::demo::cmdline_game::Game;
+use rust_chess::model::game_state::Color;
 
 fn main() {
     let mut game = Game::new(Color::BLACK, 5);
@@ -10,5 +10,4 @@ fn main() {
             break;
         }
     }
-
 }
